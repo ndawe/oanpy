@@ -1,0 +1,209 @@
+#!/usr/bin/env python
+# Copyright (C) 2009  Furius Enterprise / 6114750 Canada Inc.
+# Licensed under the terms of the GNU Lesser General Public License, version 3.
+# See http://furius.ca/oanpy/LICENSE for details.
+"""
+Read a dumpfile and convert instruments into time series (in seconds).
+This script is able to handle multiple instruments.
+"""
+
+# stdlib imports
+from __future__ import with_statement
+import sys, os, logging, struct, csv
+from os.path import join, exists
+from time import mktime
+from datetime import datetime, time, timedelta
+from random import random
+from collections import defaultdict
+from itertools import izip
+
+# numpy imports
+import numpy as np
+
+# oanda imports
+from oanserv.dumpfile import opendump
+from oanda.prices import i2d
+
+
+
+
+def daybegin(ts):
+    """ Get the timestamp corresponding to the beginning of the day. """
+    dt = datetime.fromtimestamp(ts)
+    return int(astimestamp(datetime.combine(dt.date(), time(0, 0, 0))))
+
+def tround(ts, tbegin, tdelta):
+    """ Round the timestamp according to the given interval and begin time."""
+    return tbegin + ((ts - tbegin)/tdelta)*tdelta
+
+def round_timestamp(ts, tdelta):
+    _ts = int(ts/1000)
+    ts_midnight = daybegin(_ts)
+    ts = tround(_ts, ts_midnight, tdelta)
+    return ts
+
+
+
+def astimestamp(dt):
+    return mktime(dt.timetuple())
+
+def main():
+    import optparse
+    parser = optparse.OptionParser(__doc__.strip())
+
+    parser.add_option('-i', '--interval', action='store',
+                      type='int', default=5,
+                      help="Averaging interval (in seconds)")
+
+    parser.add_option('-q', '--quiet', action='store_true',
+                      help="Be quiet, don't warn for dropped symbols.")
+
+    parser.add_option('-m', '--max-messages', action='store', type='int',
+                      help="Cutoff after reading that many messages. "
+                      "This is used mainly for debugging.")
+
+    parser.add_option('--csv', action='store_true',
+                      help="Output format should be individual CSV files.")
+
+    opts, args = parser.parse_args()
+    if len(args) != 2:
+        parser.error("You must specify a dumpfile and output filename.")
+    dumpfn, outfn = args
+
+    logging.basicConfig(level=logging.INFO,
+                        format='%(levelname)-8s: %(message)s')
+
+    # If the specified interval does not subdivide a day into equal parts, we
+    # reject it.
+    if (24*60*60 % opts.interval) != 0:
+        parser.error("Invalid interval does not subdivide equally: %s" %
+                     opts.interval)
+
+    # Figure out the beginning of the day of the first message in order to
+    # compute correct offsets.
+    dumpf = opendump(dumpfn, discard_ooo=1)
+
+    msg1 = dumpf.first()
+    ts1 = round_timestamp(msg1.timestamp, opts.interval)
+
+    if opts.max_messages:
+        assert opts.max_messages > 0
+        dumpf.seek(opts.max_messages-1)
+        msg2 = dumpf.next()
+    else:
+        msg2 = dumpf.last()
+    dumpf.seek(0)
+    ts2 = round_timestamp(msg2.timestamp, opts.interval) + opts.interval
+
+    nsamples = (ts2 - ts1)/opts.interval + 1
+    logging.info("Nb of intervals: %s" % nsamples)
+
+    times = np.arange(ts1, ts2 + 1, opts.interval)
+    assert len(times) == nsamples, (len(times), nsamples)
+
+    def create_arrays():
+        "Create arrays for bids, asks, lastbid, lastask and counts."
+        r = []
+        for _ in xrange(2):
+            a = np.empty(nsamples, np.float)
+            a.fill(0)
+            r.append(a)
+        for _ in xrange(2):
+            a = np.empty(nsamples, np.float)
+            a.fill(np.nan)
+            r.append(a)
+        r.append(np.zeros(nsamples, np.int16))
+        return r
+    data = defaultdict(create_arrays)
+
+    progress = 0
+    for i, q in enumerate(dumpf):
+        if opts.max_messages and i > opts.max_messages:
+            break
+        progress += 1
+        if progress % 20000 == 0:
+            sys.stdout.write('.')
+            sys.stdout.flush()
+
+        sumbids, sumasks, lastbid, lastask, counts = data[q.symbol.strip()]
+
+        idx = (q.timestamp/1000 - ts1)/opts.interval
+        try:
+            sumbids[idx] += q.bid
+            sumasks[idx] += q.ask
+            lastbid[idx] = q.bid
+            lastask[idx] = q.ask
+            counts[idx] += 1
+            ## print q.symbol, idx, counts[idx]
+        except IndexError, e:
+            logging.error("Index out of bounds: %d" % idx)
+
+    def fill_lasts(a):
+        lastx = np.nan
+        for i, x in enumerate(a):
+            if np.isnan(x):
+                a[i] = lastx
+            else:
+                lastx = x
+        for i, x in enumerate(a):
+            if not np.isnan(x):
+                break
+        for ii in xrange(i):
+            a[ii] = x
+
+    # Fill in all the missing values with the last bid/ask seen.
+    outdata = {}
+
+    for sym, (sumbids, sumasks, lastbid, lastask, counts) in data.iteritems():
+        if counts.max() == 0:
+            continue
+
+        fill_lasts(lastbid)
+        fill_lasts(lastask)
+        assert not np.any(np.isnan(lastbid))
+        assert not np.any(np.isnan(lastask))
+
+        bids = np.where(counts > 0, sumbids/counts, lastbid)
+        asks = np.where(counts > 0, sumasks/counts, lastask)
+
+        outdata[sym] = bids, asks
+
+
+    if opts.csv:
+        outdir = outfn # Interpret as a directory.
+        if not exists(outdir):
+            os.makedirs(outdir)
+
+        dtimes = map(datetime.fromtimestamp, times)
+
+        npairs = len(outdata)
+        logging.info("Writing %s messages, %s instruments." % (nsamples, npairs))
+
+        for sym, (bids, asks) in outdata.iteritems():
+            fn = join(outdir, '%s.csv' % sym.replace('/', ''))
+            logging.info("Writing '%s'" % fn)
+            with open(fn, 'wb') as f:
+                wr = csv.writer(f)
+                for t, b, a in izip(dtimes, bids, asks):
+                    wr.writerow( (t, i2d(int(b)), i2d(int(a))) )
+
+    else: # default, packed binary
+
+        npairs = len(outdata)
+        logging.info("Writing %s messages, %s instruments." % (nsamples, npairs))
+        f = open(outfn, 'wb')
+        f.write(struct.pack('i', nsamples))
+        f.write(struct.pack('i', npairs))
+
+        outitems = outdata.items()
+        times.tofile(f)
+        for sym, (bids, asks) in outitems:
+            f.write('%-8s' % sym)
+            bids.tofile(f)
+            asks.tofile(f)
+        f.close()
+
+
+if __name__ == '__main__':
+    main()
+

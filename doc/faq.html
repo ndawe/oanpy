@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta name="generator" content="Docutils 0.6: http://docutils.sourceforge.net/" />
+<title>FAQs and Questions Answered by OANDA</title>
+<link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+<body>
+
+<div id="project-header">
+  <a href="/"><img src="/home/furius-logo-w.png" id="logo"></a>
+  <div id="project-home"><a href="..">Project Home</a></div>
+</div>
+
+<div class="document" id="faqs-and-questions-answered-by-oanda">
+<h1 class="title">FAQs and Questions Answered by OANDA</h1>
+
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#about-the-background-threads" id="id1">About the Background Threads</a></li>
+<li><a class="reference internal" href="#about-latency" id="id2">About Latency</a></li>
+<li><a class="reference internal" href="#about-various-api-strangeness" id="id3">About Various API Strangeness</a></li>
+<li><a class="reference internal" href="#about-timestamps" id="id4">About Timestamps</a></li>
+<li><a class="reference internal" href="#about-instruments" id="id5">About Instruments</a></li>
+<li><a class="reference internal" href="#about-life-scope-and-ownership-of-api-objects" id="id6">About Life Scope and Ownership of API Objects</a></li>
+<li><a class="reference internal" href="#about-historical-data" id="id7">About Historical Data</a></li>
+<li><a class="reference internal" href="#about-boxoptions" id="id8">About BoxOptions</a></li>
+<li><a class="reference internal" href="#about-java-vs-c-apis" id="id9">About Java vs. C++ APIs</a></li>
+</ul>
+</div>
+<!-- 1  About the Background Threads
+2  About Latency
+3  About Various API Strangeness
+4  About Timestamps
+5  About Instruments
+6  About Life Scope and Ownership of API Objects
+7  About Historical Data
+8  About BoxOptions
+9  About Java vs. C++ APIs -->
+<div class="section" id="about-the-background-threads">
+<h1><a class="toc-backref" href="#id1">About the Background Threads</a></h1>
+<blockquote>
+<p>&gt; Q: <strong>*IMPORTANT</strong> The rate updates I get seem like they're
+&gt;    buffered, i.e., they come as a batch every second or so,
+&gt;    instead of being immediately sent. However, the GUI updates
+&gt;    more often that, it does not seem like it's batched at all.
+&gt;    I'm guessing that maybe this batching feature is not present
+&gt;    in the Java version of the API. Is there a way to disable this
+&gt;    buffering/batching in the C++ API, in order to get the updates
+&gt;    immediately? How? (I tried the keep-alive thread on FXClient,
+&gt;    doesn't seem to make a difference.)</p>
+<p>The rates update are still dragging mode for C++ version. Since the
+new streaming rates feature has only been released for FXServer for
+2 month, we are still working on the C++ version to support the new
+feature. The Java one has a beta release already. The C++ version
+can only work like this for now.</p>
+<p>&gt; Q: In FXClient, what is a keep-alive-thread? Why do I need one?</p>
+<p>FXClient.setWithKeepAliveThread is only used for without
+RateThread. If you are using RateThread, it will keep syncing with
+server side, else you need to turn KeepAliveThreadon. This will
+keep your session alive, so server side will not cleanyour session
+from the session pool because you have no action for morethan 10
+minutes.</p>
+<p>&gt; Q: In FXClient, what is a rate-thread? Why and when do I need one?</p>
+<p>Same as previous.</p>
+</blockquote>
+</div>
+<div class="section" id="about-latency">
+<h1><a class="toc-backref" href="#id2">About Latency</a></h1>
+<blockquote>
+<p>&gt; Q: Why don't you provide the default timeout as an attribute of the
+&gt;    FXClient object? Right now I can set it, but I cannot get it, I
+&gt;    cannot find what it is.</p>
+<p>The timeout is used to evaluate your rates delay, if the lag is big,
+then treat as timeout and throw exception.</p>
+<p>--</p>
+<p>Current rates update for C++ version is 2-3 seconds. The are stored
+inside the rateTable.</p>
+<p>--</p>
+<p>&gt; And one more question:
+&gt;
+&gt; If I have a rate thread and I subscribe to only a few instruments, does it only
+&gt; send data for those? In other words, can I reduce network traffic by
+&gt; subscribing to only some of the instruments, or if I do that it would still
+&gt; send over the updates for all of them anyway?</p>
+<p>To your last question, it will not help. Now the server will send you
+all the pairs data, even you subscribe less will not save your
+bandwidth.</p>
+</blockquote>
+</div>
+<div class="section" id="about-various-api-strangeness">
+<h1><a class="toc-backref" href="#id3">About Various API Strangeness</a></h1>
+<blockquote>
+<p>&gt; Q: In FXClient, what is the purpose of those loadable key files? Why
+&gt;    do they speed the connection and why would I ever not use them if
+&gt;    they make something faster? Do they waste resources? What's the
+&gt;    story?</p>
+<p>Loadable key files just save the time to regenerate connection key on
+both server side and client side.</p>
+<p>&gt; Q: On class User, there is a method to get and set the 'profile' (a
+&gt;    string) of the User. This value is empty in my test account, and
+&gt;    setting it to a value does nothing (i.e. getting the value
+&gt;    afterwards still returns an empty string).  What is this 'profile'
+&gt;    used for and why does setting it not work?</p>
+<p>The profile instance value will be initialized after you login.</p>
+<p>&gt; Q: In FXRateEventInfo and FXAccountEventInfo, what does compare_less
+&gt;    do exactly? For FXRateEventInfo, I'm assuming that it copmares the
+&gt;    timestamps of the tick, but for FXAccountEventInfo, what is done?
+&gt;    This is not documented.</p>
+<p>(Question unanswered.)</p>
+<p>&gt; What is the logging object?</p>
+<p>I am sorry, for the log problem, since this lib is really new. We are
+still fighting with it. The old one used to work well, but for this
+new one, we are still working on it. My personal opinion, the Java
+version is better than C++ version.</p>
+</blockquote>
+</div>
+<div class="section" id="about-timestamps">
+<h1><a class="toc-backref" href="#id4">About Timestamps</a></h1>
+<blockquote>
+<p>&gt; Q: In Order.h: the duration parameter's description is woefully
+&gt;    inadequate, it doesn't say if it is a time relative to epoch, or a
+&gt;    number of seconds, and by fiddling with it it isn't obvious to find
+&gt;    valid values::
+&gt;
+&gt;     * Duration is measured in seconds as a unix timestamp (time_t).
+&gt;     * The range of valid duration times is:
+&gt;     *  greater than current time and less than 30 days or 2592000 seconds.</p>
+<p>It is seconds.</p>
+<p>--</p>
+<p>We do compare the timestamps when requesting ticks, if the timestamp
+is not fresh, we will discard it.</p>
+</blockquote>
+</div>
+<div class="section" id="about-instruments">
+<h1><a class="toc-backref" href="#id5">About Instruments</a></h1>
+<blockquote>
+<p>&gt; Q: How do I enumerate the list of all valid instruments supported
+&gt;    by the system? It seems the only way to get an FXInstrument is
+&gt;    by calling findInstrument(), which requires you to provide the
+&gt;    pair string which you're looking for.</p>
+<p>Please try to not use the FXInstrument.</p>
+<p>For the instrument class, it is used internally. It has a long history
+and I am not sure why it is not public any more.</p>
+<p>--</p>
+<p>&gt; &gt; All the pairs you can trade on FXGui, you can trade through API. Here is
+&gt; &gt; the full list link
+&gt; &gt;
+&gt; &gt; <a class="reference external" href="http://fxtrade.oanda.com/forex_trading/why_trade_with_oanda/spreads/all_spreads.shtml">http://fxtrade.oanda.com/forex_trading/why_trade_with_oanda/spreads/all_spreads.shtml</a>
+&gt;
+&gt; I see. It would be a good idea to provide the list via the programmatic
+&gt; interface.</p>
+</blockquote>
+</div>
+<div class="section" id="about-life-scope-and-ownership-of-api-objects">
+<h1><a class="toc-backref" href="#id6">About Life Scope and Ownership of API Objects</a></h1>
+<blockquote>
+<p>&gt; Q: About FXClient::getUser(), what is the lifetime of the returned
+&gt;    User object? Am I supposed to delete it? If not, who does it? The
+&gt;    sample programs don't seem to finalize anything. Similarly, the
+&gt;    return value of FXClient::getRateTable(), who manages its lifetime?
+&gt;    Am I supposed to delete it myself?
+&gt;
+&gt;    (Similar question for ALL the functions which return pointers...
+&gt;    ownership is undocumented).</p>
+<p>The life time is together with the FXClient instance. You do not need
+to delete it.</p>
+</blockquote>
+</div>
+<div class="section" id="about-historical-data">
+<h1><a class="toc-backref" href="#id7">About Historical Data</a></h1>
+<blockquote>
+<p>&gt; Q: The documentation for RateTable says that there is a maximum of
+&gt;    either 365 or 500 records for the history points (and other similar
+&gt;    data, Candles and MinMaxPoints), depending on the requested
+&gt;    intervals. However, when you call them with a large value for
+&gt;    'numTicks', you get either 366 or 501 records. Is this a bug?</p>
+<p>For the extra one, the last candle is not finished, it is the current
+candle.</p>
+</blockquote>
+</div>
+<div class="section" id="about-boxoptions">
+<h1><a class="toc-backref" href="#id8">About BoxOptions</a></h1>
+<p>&gt; Q: Are Boxes simply not supported by the API? I could not find
+&gt;    anything about them in the include files.
+&gt;</p>
+<p>Boxoption is not supported in API.</p>
+<p><a class="reference external" href="http://www2.oanda.com/cgi-bin/msgboard/ultimatebb.cgi?ubb=get_topic&amp;f=7&amp;t=000685">http://www2.oanda.com/cgi-bin/msgboard/ultimatebb.cgi?ubb=get_topic&amp;f=7&amp;t=000685</a></p>
+</div>
+<div class="section" id="about-java-vs-c-apis">
+<h1><a class="toc-backref" href="#id9">About Java vs. C++ APIs</a></h1>
+<blockquote>
+<p>&gt; Is there any way I could testdrive the Java API without disabling my C++
+&gt; API access?</p>
+<p>We can send you the Java version for your testing. Just we only do the
+support work for one version at the same time.</p>
+</blockquote>
+</div>
+</div>
+</body>
+</html>

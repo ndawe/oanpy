@@ -1,0 +1,225 @@
+===========================================
+   Analysis of Out-of-Order Rate Updates
+===========================================
+
+Without regards to which instrument, we get many packets that are
+out-of-order:
+
+  tangerine:/data/marketdata$ oandump fixorder oanda.2008-09-08.000255.dump32  
+
+  Nb. packets out-of-order: 106738 / 7026079  (1.52 %)
+  Maximum delay: 790.0 secs
+  Average delay: 1.13825441736 secs
+  tangerine:/data/marketdata$ 
+
+
+However, we really should do this on a per-instrument basis (I would
+not believe that there is a 790 secs maximum delay for a single
+instrument)::
+
+  Pair          Nb. out-of-order   Max.delay    Avg.delay
+
+  AUD/CNY       61/24707 (0.25%)   2.000 secs   1.066 secs
+  AUD/CZK      279/58631 (0.48%)   2.000 secs   1.043 secs
+  AUD/DKK      346/58266 (0.59%)   3.000 secs   1.081 secs
+  AUD/HKD       95/31316 (0.30%)   2.000 secs   1.084 secs
+  AUD/HUF      273/58898 (0.46%)   2.000 secs   1.048 secs
+  AUD/INR       62/24988 (0.25%)   2.000 secs   1.048 secs
+  AUD/JPY      184/53622 (0.34%)   3.000 secs   1.092 secs
+  AUD/MXN      183/45414 (0.40%)   3.000 secs   1.055 secs
+  AUD/NOK      285/56988 (0.50%)   3.000 secs   1.056 secs
+  AUD/NZD      124/44301 (0.28%)   3.000 secs   1.105 secs
+  AUD/PLN      270/56728 (0.48%)   3.000 secs   1.056 secs
+  AUD/SAR       61/24592 (0.25%)   2.000 secs   1.049 secs
+  AUD/SEK      295/58990 (0.50%)   4.000 secs   1.058 secs
+  AUD/SGD       76/26155 (0.29%)   2.000 secs   1.039 secs
+  AUD/THB       87/28157 (0.31%)   2.000 secs   1.034 secs
+  AUD/TRY       99/32052 (0.31%)   2.000 secs   1.030 secs
+  AUD/TWD       62/24516 (0.25%)   2.000 secs   1.032 secs
+  AUD/USD       53/23474 (0.23%)   2.000 secs   1.057 secs
+  AUD/ZAR      189/44281 (0.43%)   4.000 secs   1.085 secs
+  CAD/AUD      204/48355 (0.42%)   2.000 secs   1.029 secs
+  CAD/CNY       82/39442 (0.21%)   2.000 secs   1.037 secs
+  CAD/CZK      278/60654 (0.46%)   2.000 secs   1.032 secs
+  CAD/DKK      349/60639 (0.58%)   3.000 secs   1.060 secs
+  CAD/HKD      108/43015 (0.25%)   2.000 secs   1.074 secs
+  CAD/HUF      285/60846 (0.47%)   2.000 secs   1.035 secs
+  CAD/INR       87/39751 (0.22%)   2.000 secs   1.034 secs
+  CAD/JPY      174/52911 (0.33%)   3.000 secs   1.034 secs
+  CAD/MXN      189/50863 (0.37%)   3.000 secs   1.058 secs
+  CAD/NOK      286/59571 (0.48%)   3.000 secs   1.045 secs
+  CAD/NZD      181/50203 (0.36%)   3.000 secs   1.044 secs
+  CAD/PLN      300/59638 (0.50%)   3.000 secs   1.037 secs
+  CAD/SAR       90/39417 (0.23%)   2.000 secs   1.044 secs
+  CAD/SEK      312/61460 (0.51%)   4.000 secs   1.058 secs
+  CAD/SGD       94/40603 (0.23%)   2.000 secs   1.043 secs
+  CAD/THB       97/41592 (0.23%)   2.000 secs   1.041 secs
+  CAD/TRY      114/45576 (0.25%)   2.000 secs   1.044 secs
+  CAD/TWD       84/39424 (0.21%)   2.000 secs   1.060 secs
+  CAD/ZAR      179/50661 (0.35%)   4.000 secs   1.106 secs
+  CHF/AUD      254/48157 (0.53%)   3.000 secs   1.047 secs
+  CHF/CAD      279/55503 (0.50%)   3.000 secs   1.036 secs
+  CHF/CNY      140/40088 (0.35%)   2.000 secs   1.029 secs
+  CHF/CZK      227/45983 (0.49%)   4.000 secs   1.066 secs
+  CHF/DKK      147/39402 (0.37%)   2.000 secs   1.048 secs
+  CHF/HKD      189/44276 (0.43%)   2.000 secs   1.032 secs
+  CHF/HUF      166/41340 (0.40%)   3.000 secs   1.078 secs
+  CHF/INR      139/40287 (0.35%)   2.000 secs   1.029 secs
+  CHF/JPY      207/54847 (0.38%)   3.000 secs   1.053 secs
+  CHF/MXN      287/53366 (0.54%)   3.000 secs   1.052 secs
+  CHF/NOK      256/49029 (0.52%)   4.000 secs   1.055 secs
+  CHF/NZD      260/52052 (0.50%)   3.000 secs   1.050 secs
+  CHF/PLN      255/48996 (0.52%)   2.000 secs   1.051 secs
+  CHF/SAR      146/39991 (0.37%)   2.000 secs   1.034 secs
+  CHF/SEK      253/48411 (0.52%)   5.000 secs   1.063 secs
+  CHF/SGD      154/40979 (0.38%)   2.000 secs   1.032 secs
+  CHF/THB      173/42515 (0.41%)   2.000 secs   1.029 secs
+  CHF/TRY      289/51549 (0.56%)   2.000 secs   1.035 secs
+  CHF/TWD      147/40000 (0.37%)   2.000 secs   1.048 secs
+  CHF/ZAR      294/52680 (0.56%)   3.000 secs   1.054 secs
+  CNY/JPY      130/38973 (0.33%)   3.000 secs   1.069 secs
+  CZK/JPY      312/58792 (0.53%)   3.000 secs   1.058 secs
+  DKK/JPY      237/55772 (0.42%)   3.000 secs   1.055 secs
+  EUR/AUD      201/53879 (0.37%)   2.000 secs   1.045 secs
+  EUR/CAD      178/52395 (0.34%)   3.000 secs   1.045 secs
+  EUR/CHF      120/37754 (0.32%)   2.000 secs   1.033 secs
+  EUR/CNY      100/31739 (0.32%)   2.000 secs   1.030 secs
+  EUR/CZK       41/21137 (0.19%)   2.000 secs   1.073 secs
+  EUR/DKK         9/3997 (0.23%)   2.000 secs   1.111 secs
+  EUR/GBP      129/39497 (0.33%)   4.000 secs   1.085 secs
+  EUR/HKD      141/37395 (0.38%)   3.000 secs   1.057 secs
+  EUR/HUF       17/10469 (0.16%)   1.000 secs   1.000 secs
+  EUR/INR      102/31959 (0.32%)   2.000 secs   1.029 secs
+  EUR/JPY      217/55030 (0.39%)   3.000 secs   1.055 secs
+  EUR/MXN      244/49761 (0.49%)   3.000 secs   1.053 secs
+  EUR/NOK       58/28266 (0.21%)   2.000 secs   1.069 secs
+  EUR/NZD      228/47809 (0.48%)   3.000 secs   1.048 secs
+  EUR/PLN       51/29618 (0.17%)   2.000 secs   1.098 secs
+  EUR/SAR      104/31611 (0.33%)   2.000 secs   1.038 secs
+  EUR/SEK       54/25738 (0.21%)   3.000 secs   1.093 secs
+  EUR/SGD      120/32872 (0.37%)   2.000 secs   1.042 secs
+  EUR/THB      123/34771 (0.35%)   2.000 secs   1.024 secs
+  EUR/TRY      122/38797 (0.31%)   2.000 secs   1.049 secs
+  EUR/TWD      101/31594 (0.32%)   2.000 secs   1.040 secs
+  EUR/USD       96/30716 (0.31%)   2.000 secs   1.042 secs
+  EUR/ZAR      249/48753 (0.51%)   3.000 secs   1.064 secs
+  GBP/AUD      246/48410 (0.51%)   3.000 secs   1.057 secs
+  GBP/CAD      283/55241 (0.51%)   3.000 secs   1.060 secs
+  GBP/CHF      229/55146 (0.42%)   2.000 secs   1.039 secs
+  GBP/CNY      140/40336 (0.35%)   3.000 secs   1.057 secs
+  GBP/CZK      236/47446 (0.50%)   3.000 secs   1.059 secs
+  GBP/DKK      153/41179 (0.37%)   3.000 secs   1.046 secs
+  GBP/HKD      180/44326 (0.41%)   3.000 secs   1.072 secs
+  GBP/HUF      186/42962 (0.43%)   3.000 secs   1.054 secs
+  GBP/INR      144/40495 (0.36%)   3.000 secs   1.056 secs
+  GBP/JPY      260/57141 (0.46%)   3.000 secs   1.073 secs
+  GBP/MXN      301/53128 (0.57%)   3.000 secs   1.047 secs
+  GBP/NOK      258/50467 (0.51%)   4.000 secs   1.066 secs
+  GBP/NZD      266/51754 (0.51%)   3.000 secs   1.045 secs
+  GBP/PLN      269/50474 (0.53%)   3.000 secs   1.056 secs
+  GBP/SAR      141/40247 (0.35%)   3.000 secs   1.071 secs
+  GBP/SEK      260/49794 (0.52%)   5.000 secs   1.073 secs
+  GBP/SGD      168/41271 (0.41%)   3.000 secs   1.054 secs
+  GBP/THB      168/42566 (0.39%)   3.000 secs   1.048 secs
+  GBP/TRY      301/52266 (0.58%)   3.000 secs   1.037 secs
+  GBP/TWD      146/40227 (0.36%)   3.000 secs   1.082 secs
+  GBP/USD      134/39524 (0.34%)   3.000 secs   1.060 secs
+  GBP/ZAR      292/52584 (0.56%)   3.000 secs   1.065 secs
+  HKD/CNY         0/4948 (0.00%)   0.000 secs   0.000 secs
+  HKD/CZK        0/11576 (0.00%)   0.000 secs   0.000 secs
+  HKD/DKK        0/11534 (0.00%)   0.000 secs   0.000 secs
+  HKD/HUF        0/11571 (0.00%)   0.000 secs   0.000 secs
+  HKD/INR         0/4980 (0.00%)   0.000 secs   0.000 secs
+  HKD/JPY      178/43407 (0.41%)   3.000 secs   1.079 secs
+  HKD/MXN         0/9380 (0.00%)   0.000 secs   0.000 secs
+  HKD/NOK        0/11494 (0.00%)   0.000 secs   0.000 secs
+  HKD/PLN        0/11486 (0.00%)   0.000 secs   0.000 secs
+  HKD/SAR         0/4869 (0.00%)   0.000 secs   0.000 secs
+  HKD/SEK        0/11687 (0.00%)   0.000 secs   0.000 secs
+  HKD/SGD         0/5639 (0.00%)   0.000 secs   0.000 secs
+  HKD/THB         0/5544 (0.00%)   0.000 secs   0.000 secs
+  HKD/TRY         0/6626 (0.00%)   0.000 secs   0.000 secs
+  HKD/TWD         0/4765 (0.00%)   0.000 secs   0.000 secs
+  HKD/ZAR         0/9096 (0.00%)   0.000 secs   0.000 secs
+  INR/JPY      134/39209 (0.34%)   3.000 secs   1.082 secs
+  JPY/HUF      268/57014 (0.47%)   3.000 secs   1.052 secs
+  MXN/JPY      267/52826 (0.51%)   3.000 secs   1.075 secs
+  NOK/JPY      334/59691 (0.56%)   4.000 secs   1.054 secs
+  NZD/HKD         0/9515 (0.00%)   0.000 secs   0.000 secs
+  NZD/JPY      263/51485 (0.51%)   3.000 secs   1.076 secs
+  NZD/SGD         0/9162 (0.00%)   0.000 secs   0.000 secs
+  NZD/USD       59/31597 (0.19%)   3.000 secs   1.051 secs
+  PLN/JPY      334/60178 (0.56%)   3.000 secs   1.057 secs
+  SAR/JPY      139/38921 (0.36%)   3.000 secs   1.079 secs
+  SEK/JPY      336/59704 (0.56%)   5.000 secs   1.068 secs
+  SGD/CNY         0/4137 (0.00%)   0.000 secs   0.000 secs
+  SGD/CZK        0/11562 (0.00%)   0.000 secs   0.000 secs
+  SGD/DKK        0/11500 (0.00%)   0.000 secs   0.000 secs
+  SGD/HUF        0/11538 (0.00%)   0.000 secs   0.000 secs
+  SGD/INR         0/4169 (0.00%)   0.000 secs   0.000 secs
+  SGD/JPY      157/39970 (0.39%)   3.000 secs   1.083 secs
+  SGD/MXN         0/9111 (0.00%)   0.000 secs   0.000 secs
+  SGD/NOK        0/11434 (0.00%)   0.000 secs   0.000 secs
+  SGD/PLN        0/11403 (0.00%)   0.000 secs   0.000 secs
+  SGD/SAR         0/4070 (0.00%)   0.000 secs   0.000 secs
+  SGD/SEK        0/11661 (0.00%)   0.000 secs   0.000 secs
+  SGD/THB         0/4893 (0.00%)   0.000 secs   0.000 secs
+  SGD/TRY         0/5915 (0.00%)   0.000 secs   0.000 secs
+  SGD/TWD         0/3928 (0.00%)   0.000 secs   0.000 secs
+  SGD/ZAR         0/8879 (0.00%)   0.000 secs   0.000 secs
+  THB/JPY      167/41511 (0.40%)   3.000 secs   1.066 secs
+  TRY/JPY      392/62399 (0.63%)   3.000 secs   1.033 secs
+  TWD/JPY      136/38908 (0.35%)   3.000 secs   1.081 secs
+  USD/CAD       79/38753 (0.20%)   2.000 secs   1.051 secs
+  USD/CHF      133/39300 (0.34%)   2.000 secs   1.030 secs
+  USD/CNY         0/1923 (0.00%)   0.000 secs   0.000 secs
+  USD/CZK      145/53335 (0.27%)   2.000 secs   1.048 secs
+  USD/DKK      155/52742 (0.29%)   3.000 secs   1.071 secs
+  USD/HKD       19/12073 (0.16%)   2.000 secs   1.158 secs
+  USD/HUF      147/53717 (0.27%)   2.000 secs   1.034 secs
+  USD/INR         0/2313 (0.00%)   0.000 secs   0.000 secs
+  USD/JPY      122/38186 (0.32%)   3.000 secs   1.074 secs
+  USD/MXN       58/34070 (0.17%)   3.000 secs   1.103 secs
+  USD/NOK      161/50954 (0.32%)   3.000 secs   1.068 secs
+  USD/PLN      147/50662 (0.29%)   3.000 secs   1.054 secs
+  USD/SAR         0/1703 (0.00%)   0.000 secs   0.000 secs
+  USD/SEK      161/53746 (0.30%)   3.000 secs   1.062 secs
+  USD/SGD         2/4287 (0.05%)   1.000 secs   1.000 secs
+  USD/THB        10/7134 (0.14%)   1.000 secs   1.000 secs
+  USD/TRY       15/12308 (0.12%)   1.000 secs   1.000 secs
+  USD/TWD         0/1667 (0.00%)   0.000 secs   0.000 secs
+  USD/ZAR       67/32955 (0.20%)   3.000 secs   1.119 secs
+  XAG/AUD      294/55864 (0.53%)   4.000 secs   1.102 secs
+  XAG/CAD      257/57933 (0.44%)   4.000 secs   1.121 secs
+  XAG/CHF      395/60950 (0.65%)   4.000 secs   1.094 secs
+  XAG/EUR      350/58892 (0.59%)   4.000 secs   1.091 secs
+  XAG/GBP      416/60641 (0.69%)   4.000 secs   1.082 secs
+  XAG/HKD        0/11299 (0.00%)   0.000 secs   0.000 secs
+  XAG/JPY      367/60695 (0.60%)   4.000 secs   1.095 secs
+  XAG/SGD        0/11271 (0.00%)   0.000 secs   0.000 secs
+  XAG/USD      112/49123 (0.23%)   3.000 secs   1.089 secs
+  XAU/AUD      276/55554 (0.50%)   3.000 secs   1.080 secs
+  XAU/CAD      272/57927 (0.47%)   3.000 secs   1.070 secs
+  XAU/CHF      369/60681 (0.61%)   3.000 secs   1.046 secs
+  XAU/EUR      332/58383 (0.57%)   3.000 secs   1.063 secs
+  XAU/GBP      363/60446 (0.60%)   3.000 secs   1.055 secs
+  XAU/HKD        0/11374 (0.00%)   0.000 secs   0.000 secs
+  XAU/JPY      351/60218 (0.58%)   3.000 secs   1.060 secs
+  XAU/SGD        0/11325 (0.00%)   0.000 secs   0.000 secs
+  XAU/USD      129/48333 (0.27%)   3.000 secs   1.070 secs
+  ZAR/JPY      270/52224 (0.52%)   4.000 secs   1.070 secs
+
+
+Here we can see that the maximum delay (per instrument) is 5 secs,
+that the average delay for out-of-order packets is 1 sec, and that
+around 0.5% of all packets come out-of-order.
+
+We can easily implement a simple algorithm to fixup the dumpfiles if
+desired.
+
+For live data, however, we should probably not bother with this delay,
+and simply discard old timestamps. We will add a feature in the server
+to avoid notifying the clients with out-of-order rates. In any case,
+the backtesting strategy should use the same input as the live code.
+
+

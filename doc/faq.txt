@@ -1,0 +1,217 @@
+==========================================
+   FAQs and Questions Answered by OANDA
+==========================================
+
+.. contents::
+..
+    1  About the Background Threads
+    2  About Latency
+    3  About Various API Strangeness
+    4  About Timestamps
+    5  About Instruments
+    6  About Life Scope and Ownership of API Objects
+    7  About Historical Data
+    8  About BoxOptions
+    9  About Java vs. C++ APIs
+
+
+About the Background Threads
+============================
+
+  > Q: ***IMPORTANT** The rate updates I get seem like they're
+  >    buffered, i.e., they come as a batch every second or so,
+  >    instead of being immediately sent. However, the GUI updates
+  >    more often that, it does not seem like it's batched at all.
+  >    I'm guessing that maybe this batching feature is not present
+  >    in the Java version of the API. Is there a way to disable this
+  >    buffering/batching in the C++ API, in order to get the updates
+  >    immediately? How? (I tried the keep-alive thread on FXClient,
+  >    doesn't seem to make a difference.)
+
+  The rates update are still dragging mode for C++ version. Since the
+  new streaming rates feature has only been released for FXServer for
+  2 month, we are still working on the C++ version to support the new
+  feature. The Java one has a beta release already. The C++ version
+  can only work like this for now.
+
+
+  > Q: In FXClient, what is a keep-alive-thread? Why do I need one?
+
+  FXClient.setWithKeepAliveThread is only used for without
+  RateThread. If you are using RateThread, it will keep syncing with
+  server side, else you need to turn KeepAliveThreadon. This will
+  keep your session alive, so server side will not cleanyour session
+  from the session pool because you have no action for morethan 10
+  minutes.
+
+
+  > Q: In FXClient, what is a rate-thread? Why and when do I need one?
+
+  Same as previous.
+
+
+About Latency
+=============
+
+  > Q: Why don't you provide the default timeout as an attribute of the
+  >    FXClient object? Right now I can set it, but I cannot get it, I
+  >    cannot find what it is.
+
+  The timeout is used to evaluate your rates delay, if the lag is big,
+  then treat as timeout and throw exception.
+
+  --
+
+  Current rates update for C++ version is 2-3 seconds. The are stored
+  inside the rateTable.
+
+  --
+
+  > And one more question:
+  >
+  > If I have a rate thread and I subscribe to only a few instruments, does it only
+  > send data for those? In other words, can I reduce network traffic by
+  > subscribing to only some of the instruments, or if I do that it would still
+  > send over the updates for all of them anyway?
+
+  To your last question, it will not help. Now the server will send you
+  all the pairs data, even you subscribe less will not save your
+  bandwidth.
+
+
+About Various API Strangeness
+=============================
+
+  > Q: In FXClient, what is the purpose of those loadable key files? Why
+  >    do they speed the connection and why would I ever not use them if
+  >    they make something faster? Do they waste resources? What's the
+  >    story?
+
+  Loadable key files just save the time to regenerate connection key on
+  both server side and client side.
+
+
+  > Q: On class User, there is a method to get and set the 'profile' (a
+  >    string) of the User. This value is empty in my test account, and
+  >    setting it to a value does nothing (i.e. getting the value
+  >    afterwards still returns an empty string).  What is this 'profile'
+  >    used for and why does setting it not work?
+
+  The profile instance value will be initialized after you login.
+
+
+  > Q: In FXRateEventInfo and FXAccountEventInfo, what does compare_less
+  >    do exactly? For FXRateEventInfo, I'm assuming that it copmares the
+  >    timestamps of the tick, but for FXAccountEventInfo, what is done?
+  >    This is not documented.
+
+  (Question unanswered.)
+
+
+  > What is the logging object?
+
+  I am sorry, for the log problem, since this lib is really new. We are
+  still fighting with it. The old one used to work well, but for this
+  new one, we are still working on it. My personal opinion, the Java
+  version is better than C++ version.
+
+
+
+About Timestamps
+================
+
+  > Q: In Order.h: the duration parameter's description is woefully
+  >    inadequate, it doesn't say if it is a time relative to epoch, or a
+  >    number of seconds, and by fiddling with it it isn't obvious to find
+  >    valid values::
+  >
+  > 	* Duration is measured in seconds as a unix timestamp (time_t).
+  > 	* The range of valid duration times is:
+  > 	*  greater than current time and less than 30 days or 2592000 seconds.
+
+  It is seconds.
+
+  --
+
+  We do compare the timestamps when requesting ticks, if the timestamp
+  is not fresh, we will discard it.
+
+
+About Instruments
+=================
+
+  > Q: How do I enumerate the list of all valid instruments supported
+  >    by the system? It seems the only way to get an FXInstrument is
+  >    by calling findInstrument(), which requires you to provide the
+  >    pair string which you're looking for.
+
+  Please try to not use the FXInstrument.
+
+  For the instrument class, it is used internally. It has a long history
+  and I am not sure why it is not public any more.
+
+  --
+
+  > > All the pairs you can trade on FXGui, you can trade through API. Here is
+  > > the full list link
+  > >
+  > > http://fxtrade.oanda.com/forex_trading/why_trade_with_oanda/spreads/all_spreads.shtml
+  >
+  > I see. It would be a good idea to provide the list via the programmatic
+  > interface.
+
+
+
+
+
+About Life Scope and Ownership of API Objects
+=============================================
+
+  > Q: About FXClient::getUser(), what is the lifetime of the returned
+  >    User object? Am I supposed to delete it? If not, who does it? The
+  >    sample programs don't seem to finalize anything. Similarly, the
+  >    return value of FXClient::getRateTable(), who manages its lifetime?
+  >    Am I supposed to delete it myself?
+  >
+  >    (Similar question for ALL the functions which return pointers...
+  >    ownership is undocumented).
+
+  The life time is together with the FXClient instance. You do not need
+  to delete it.
+
+
+About Historical Data
+=====================
+
+   > Q: The documentation for RateTable says that there is a maximum of
+   >    either 365 or 500 records for the history points (and other similar
+   >    data, Candles and MinMaxPoints), depending on the requested
+   >    intervals. However, when you call them with a large value for
+   >    'numTicks', you get either 366 or 501 records. Is this a bug?
+
+   For the extra one, the last candle is not finished, it is the current
+   candle.
+
+
+About BoxOptions
+================
+
+> Q: Are Boxes simply not supported by the API? I could not find
+>    anything about them in the include files.
+>
+
+Boxoption is not supported in API.
+
+http://www2.oanda.com/cgi-bin/msgboard/ultimatebb.cgi?ubb=get_topic&f=7&t=000685
+
+
+About Java vs. C++ APIs
+=======================
+
+  > Is there any way I could testdrive the Java API without disabling my C++
+  > API access?
+
+  We can send you the Java version for your testing. Just we only do the
+  support work for one version at the same time.
+
+

@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+  <head>
+    <title>Protocol: Protocols</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <style>
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  background-color: #EEE;
+}
+
+td {
+  border: thin solid black;
+  padding-left: 1em;
+  padding-right: 1em;
+}
+
+td.code {
+  font-weight: bold;
+}
+
+td.empty {
+  background-color: #CCC;
+}
+    </style>
+  </head>
+  <body>
+
+
+<h1>Protocol RegProtoDef</h1>
+<p> Description of a simple protocol to register for streaming and querying
+    rates.</p>
+<table>
+<thead><tr>
+<th class="name">Message</th>
+<th class="code">Code</th>
+<th class="format">Description/Arguments</th>
+</tr></thead>
+<tr>
+<td class="name">subscribe_all</td>
+<td class="code">A</td>
+<td class="doc">Susbcribe globally to all instruments.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">(  )</td>
+</tr>
+<tr>
+<td class="name">list_instruments</td>
+<td class="code">I</td>
+<td class="doc">List all the supported instruments.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">(  )</td>
+</tr>
+<tr>
+<td class="name">unsubscribe_all</td>
+<td class="code">Z</td>
+<td class="doc">Remove subscriptions (global and specific).</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">(  )</td>
+</tr>
+<tr>
+<td class="name">getrate</td>
+<td class="code">G</td>
+<td class="doc">Immediately fetch a rate for a specific instrument.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">( <span class="param"><b>str8</b> instrument</span> )</td>
+</tr>
+<tr>
+<td class="name">subscribe</td>
+<td class="code">S</td>
+<td class="doc">Subscribe for notifications on a specific instrument.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">( <span class="param"><b>str8</b> instrument</span> )</td>
+</tr>
+<tr>
+<td class="name">unsubscribe</td>
+<td class="code">U</td>
+<td class="doc">Remove a subscription to a specific instrument.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">( <span class="param"><b>str8</b> instrument</span> )</td>
+</tr>
+<tr>
+<td class="name">getrateall</td>
+<td class="code">T</td>
+<td class="doc">Immediately fetch rates for all supported instruments.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">( <span class="param"><b>int8</b> txnid</span> )</td>
+</tr>
+</table>
+<h1>Protocol RateProtoDef</h1>
+<p> Description of a simple protocol that provides individual rate updates.</p>
+<table>
+<thead><tr>
+<th class="name">Message</th>
+<th class="code">Code</th>
+<th class="format">Description/Arguments</th>
+</tr></thead>
+<tr>
+<td class="name">end_txn</td>
+<td class="code">X</td>
+<td class="doc">End transaction.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">( <span class="param"><b>int8</b> txnid</span> )</td>
+</tr>
+<tr>
+<td class="name">rate</td>
+<td class="code">R</td>
+<td class="doc">Rate notification.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">( <span class="param"><b>int16</b> timestamp</span>, <span class="param"><b>str8</b> instrument</span>, <span class="param"><b>int16</b> bid</span>, <span class="param"><b>int16</b> ask</span> )</td>
+</tr>
+<tr>
+<td class="name">decl_instrument</td>
+<td class="code">I</td>
+<td class="doc">Instrument declaration.</td>
+</tr>
+<tr>
+<td colspan="2" class="empty"></td>
+<td class="format">( <span class="param"><b>str8</b> instrument</span> )</td>
+</tr>
+</table>
+
+  </body>
+</html>
+

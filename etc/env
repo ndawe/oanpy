@@ -1,0 +1,42 @@
+#!/bin/sh
+# Environment initialization for project.
+
+PROJ=oanpy
+PROJREL=oanpy-release
+
+HOST=$(hostname)
+SERVER="proteus.turbulent.ca"
+
+INSTALL_ROOT=/data/fx
+
+# If on the server, use the shared installed root to run stuff.
+if [ "$HOST" = "$SERVER" -a -d "$INSTALL_ROOT/$PROJREL" ]; then
+    ROOT="$INSTALL_ROOT/$PROJREL"
+else
+    # Set a default private project directory if needed.
+    [ -z "$PROJDIR" ] && PROJDIR=$HOME/p/$PROJ
+    ROOT="$PROJDIR"
+
+    # Import my private file with my FXGame username:password
+    [ -f $CONF/common/etc/oanda.env ] && . $CONF/common/etc/oanda.env
+
+    # Set directory where the private API include files should live.
+    OANDA_API=$PROJECTS/oanpy/include
+    export OANDA_API
+fi
+
+# Add the bin directory.
+if [ -n "$USERPATH" ]; then
+    # For those using projects init, set the path using USERPATH.
+    USERPATH=$USERPATH:$ROOT/bin
+else
+    # For all others, use PATH the usual way.
+    PATH=$PATH:$ROOT/bin
+fi
+
+# Add the Python libraries.
+PYTHONPATH=$PYTHONPATH:$ROOT/lib/python
+if [ -d "$ROOT/lib/python-fallback" ]; then
+    PYTHONPATH=$PYTHONPATH:$ROOT/lib/python-fallback
+fi
+

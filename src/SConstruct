@@ -1,0 +1,113 @@
+#!/usr/bin/env python
+# Copyright (C) 2009  Furius Enterprise / 6114750 Canada Inc.
+# Licensed under the terms of the GNU Lesser General Public License, version 3.
+# See http://furius.ca/oanpy/LICENSE for details.
+"""
+Scons makefile for OANDA Python extension module.
+
+Note: in order to make clean, use 'scons -c'.
+
+"""
+
+import os
+from os.path import *
+
+
+PYVERSION = 'python2.6'
+
+#
+# Setup a common environment for build.
+#
+def find_hg_root():
+    dn = os.getcwd()
+    while not exists(join(dn, '.hg')):
+        dn = dirname(dn)
+    return dn
+reporoot = find_hg_root()
+
+oanda_api = join(reporoot, 'include')
+
+oanda_deplibs = ('nsl m c pthread dl z crypto rt expat '
+                 'boost_python boost_thread').split()
+
+
+hide_visibility = 1
+
+
+#
+# Create a static library with all our code (liboanpy.a).
+#
+env_sta = Environment(
+	CPPPATH=["/usr/include/%s" % PYVERSION, oanda_api, '.'],
+        LIBPATH=[oanda_api],
+	LIBS=[],
+)
+if hide_visibility:
+    env_sta.Append(CCFLAGS=['-fvisibility=hidden',
+                            '-fvisibility-inlines-hidden'])
+
+
+objects = []
+for fn in ('exception.cpp',
+           'connect.cpp',
+           'data.cpp',
+           'events.cpp',
+           'orders.cpp',
+           'extras.cpp',
+           'init.cpp',
+           ):
+    obj = env_sta.SharedObject(fn)
+    objects.append(obj)
+
+oanpy_static = env_sta.StaticLibrary(
+    target='oanpy',
+    source=objects)
+
+# Create a corresponding dynamic library.
+
+## env_so = env_sta.Clone()
+## oanpy_so = env_so.SharedLibrary(
+##     target='oanpy',
+##     source=objects)
+
+
+
+# Create pre-compiled headers target for speeding up Boost includes.
+## g++ -E -I/usr/include/pythonXXX  pchboost.h > pchboost.hpp
+pch_builder = Builder(
+    src_suffix='.h',
+    suffix='.hpp',
+    action='g++ -E -I/usr/include/%s $SOURCE > $TARGET' % PYVERSION)
+env_sta.Append(BUILDERS = {'PrecompiledHeader': pch_builder})
+pchboost = env_sta.PrecompiledHeader('pchboost.h')
+for obj in objects:
+    env_sta.Depends(obj, pchboost)
+
+
+
+#
+# Create the Python module, a shared library, which links together the fxclient
+# lib and our code.
+#
+env_mod = Environment(
+    LIBPATH=[oanda_api, '.'],
+    LIBS=oanda_deplibs + ["oanpy", "fxclient"],
+    SHLIBPREFIX="",
+)
+if hide_visibility:
+    env_mod.Append(SHLINKFLAGS=['-fvisibility=hidden',
+                                '-fvisibility-inlines-hidden',
+                                '--strip-all'])
+extmod = env_mod.SharedLibrary('_oanda', ['oanda.cpp'])
+
+## env_mod.Depends(extmod, oanpy_static)
+
+
+#
+# Install the extension module where it can be loaded.
+#
+package_dir = join(reporoot, 'lib', 'python', 'oanda')
+install = env_mod.Install(package_dir, extmod)
+env_mod.Alias('install', package_dir)
+Default(install)
+

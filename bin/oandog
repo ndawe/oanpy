@@ -1,0 +1,204 @@
+#!/usr/bin/env python
+# Copyright (C) 2009  Furius Enterprise / 6114750 Canada Inc.
+# Licensed under the terms of the GNU Lesser General Public License, version 3.
+# See http://furius.ca/oanpy/LICENSE for details.
+"""
+A program that watches oanserv and attempts to restart it if it dies.
+
+We need this because we believe OANDA closes our connection every now and then,
+or for whatever reason our process dies (maybe we need to do some debugging); in
+the meantime, we need to accumulate market data, so we need the process alive.
+
+This program also automatically sets logfile names and dumpfile names.
+"""
+
+# stdlib imports
+import os, logging, threading, signal, grp, time
+from os.path import join
+from datetime import datetime, timedelta, date
+from subprocess import *
+
+# oanda imports
+from oanda import utils
+from oanserv.ext.daemon import daemonize
+from oanserv.oanserver import EXIT_CANNOTLOGIN, EXIT_IDLE
+from oanserv.oanserver import get_weekend, timedelta_seconds
+
+
+    
+def main():
+    import optparse
+    parser = optparse.OptionParser(__doc__.strip())
+    utils.add_userpass(parser)
+
+    parser.add_option('-o', '--output', action='store',
+                      default=os.getcwd(),
+                      help="Directory where dump and log files are stored.")
+
+    parser.add_option('-g', '--group', action='store',
+                      help="Group to create the output files under.")
+
+    opts, args = parser.parse_args()
+    utils.check_userpass(parser, opts)
+
+    if opts.group:
+        try:
+            _, _, opts.gid, _ = grp.getgrnam(opts.group)
+        except KeyError:
+            parser.error("Invalid group '%s'." % opts.group)
+
+    # Get in the background.
+    doglog = join(opts.output, 'oandog.log')
+
+    print "Daemon logging to '%s'" % doglog
+    daemonize()
+
+    # Configure logger and print a start banner.
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s [%(levelname)-8s]  %(message)s',
+                        filename=doglog)
+    if opts.group:
+        os.chown(doglog, -1, opts.gid)
+
+    logging.info("-" * 80)
+    logging.info("Starting oandog.")
+
+    # Set a minimal environment for subprocess.
+    env = {'PATH': os.environ['PATH'],
+           'PYTHONPATH': os.environ['PYTHONPATH'],
+           'OANDA_USERPASS':
+           '%s:%s:%s' % (opts.conncls, opts.username, opts.password)}
+
+    try:
+        while 1:
+
+            # Create original output filenames for server.
+            base = join(opts.output,
+                        'oanda.%s' % datetime.now().strftime('%Y-%m-%d.%H%M%S'))
+            dumpfn = '%s.dump' % base
+            logfn = '%s.log' % base
+
+            # Figure out details of subcommand.
+            logf = open(logfn, 'w', 0)
+            cmd = ['oanserv', '-C', opts.conncls, '-U', opts.username, '-P', '-']
+            cmd.extend( ('--dumpfile', dumpfn) )
+            if opts.group:
+                cmd.extend(['--group', opts.group])
+                os.chown(logfn, -1, opts.gid)
+
+            # Start subprocess.
+            logging.info('Starting: %s' % ' '.join(cmd))
+            t1 = time.time()
+            p = Popen(cmd,
+                      shell=False, env=env,
+                      stdin=PIPE, stdout=logf, stderr=logf, bufsize=0)
+            p.stdin.write(opts.password + '\n')
+            p.stdin.close()
+
+            # Hang on until it's done.
+            # Note: we wait in another thread in order to implement timeout.
+            class Waiter(threading.Thread):
+                rval = None
+
+                def __init__(self, p):
+                    threading.Thread.__init__(self)
+                    self.p = p
+
+                def run(self):
+                    self.rval = self.p.wait()
+
+            # Wait for child process (with timeout every few minutes).
+            timeout = 5*60 # secs
+            t = Waiter(p)
+            t.start()
+            start_day = date.today()
+            while 1:
+                t.join(timeout)
+                if t.rval is not None:
+                    break
+
+                # Kill the child once per day at around midnight, nicely.
+                cur_day = date.today()
+                if cur_day != start_day:
+                    logging.info("It's midnight; renewing child.")
+                    os.kill(p.pid, signal.SIGTERM)
+
+            logging.warning('Process exited with return code: %s' % t.rval)
+            t_last = time.time() - t1
+            
+            delay = figure_out_next_delay(t.rval, t_last, datetime.now())
+            logging.error('Waiting for %s seconds.' % delay)
+            time.sleep(delay)
+
+    except KeyboardInterrupt:
+        logging.warning('Interrupted.')
+
+    logging.info("Exiting oandog.")
+
+
+
+def figure_out_next_delay(code_last, time_last, now):
+    """ Figure out how many seconds to wait to restart the last process, based
+    on its return code, the time it ran, and the current time."""
+
+    # Figure out how many seconds to wait until the next restart.
+    if code_last == EXIT_CANNOTLOGIN:
+        logging.error('Subprocess could not login.')
+        delay = 10*60
+
+    elif code_last == EXIT_IDLE:
+        # We've been idle, network problem? try again right away.
+        logging.error('Subprocess exited because idle.')
+        delay = 5*60 
+
+    elif code_last == 0:
+        logging.error('Subprocess exited normally.')
+
+        threshold = 60
+        if time_last < threshold:
+            logging.error(
+                'Subprocess lived less than %s secs.' % threshold)
+            delay = 10*60
+        else:
+            delay = 0
+
+    else:
+        logging.error('Unknown exit: return code = %s.' % code_last)
+        delay = 60*60
+
+    if delay:
+        # If it's the weekend, no matter what, we wait until the market
+        # reopens.
+        dtclose, dtopen = get_weekend(now)
+        if dtclose < now < dtopen:
+            # Calculate the number of seconds to wait until mkt open.
+            logging.error(
+                "Oh! It's the weekend, let's wait until it opens again.")
+            delay = timedelta_seconds(dtopen - now)
+
+    return delay
+
+    
+
+
+def test():
+    import random
+    w = logging.warn
+
+    for x in xrange(100):
+        code_last = random.choice((EXIT_CANNOTLOGIN, EXIT_IDLE, 0))
+        time_last = 4*60*60 if random.random() < 0.5 else 5
+        now = datetime.now() + timedelta(days=random.randint(0, 6),
+                                         seconds=random.randint(0, 24*60*60))
+        w('-'* 60)
+        w('code: %s' % code_last)
+        w('time: %s' % time_last)
+        w('now: %s' % now.ctime())
+        w('delay: %s secs' % figure_out_next_delay(code_last, time_last, now))
+
+
+
+if __name__ == '__main__':
+    ## test()
+    main()
+

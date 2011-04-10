@@ -1,0 +1,52 @@
+=================
+   TODO: oanpy
+=================
+
+
+
+- We need to better logfile report/monitoring for oanserv, with the
+  name of the accessing connection, etc.
+
+- Implement a system to calculate the slippage of placed trades.
+
+- In Texan, we really need to devise a way to generalize transactions.
+
+- We should provide some sort of return value indicating whether the
+  dispatching functions (C++) timed out or not.
+
+- Write more decent __str__ methods (they are rather crappy the
+  current ones) and move the native ones to dump() methods on the
+  relevant objects.
+
+- numpy: Implement versions of the vector fetching functions that work
+  with NumPy (ifdef'ed, optional compile-time option), implemented in
+  C, so that they're faster.
+
+- Port to Windows and Mac.
+
+
+(Apps)
+
+- Account-status / reporting -- finish oanda/report.py code.
+
+- Finish my program that outputs the same (similar) tables as the
+  FXTrade GUI for orders, positions, transactions, etc.
+
+    This should probably take the form of a webpage, a-la mercurial.
+
+- Write a simple demo trading GUI test program using PyQt.
+
+
+(Build)
+
+- This bit of Scons configuration doesn't work, but should be fixed
+  and used to check the presence of libfxclient.a::
+
+    conf = Configure(env)
+    if not conf.CheckLib('fxclient'):
+        print >> sys.stderr, ("You need to have the OANDA libfxclient "
+                              "in order to build.")
+        Exit(1)
+    env = conf.Finish()
+    SetOption('implicit_cache', 1)
+

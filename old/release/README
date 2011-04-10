@@ -1,0 +1,4 @@
+I used have a binary release process, where the client library would
+get pre-built, and could be released without my source, and could be
+linked with the OANDA API. These are the old files I used to use for
+this.

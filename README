@@ -1,0 +1,180 @@
+==================================================
+   OanPy: Python Bindings for OANDA Trading API
+==================================================
+
+This open source package provides an extension module for Python_ that
+can be used to access to the programmatic API for the OANDA_ FX
+broker. The entire API's functionality is supported, including live
+market data updates and order placement.
+
+The ability to do fast prototyping of trading strategies directly
+using a dynamic language like Python_ is very exciting. You can
+leverage numerical libraries like NumPy in order to perform analysis
+on market data directly from the API, or you can write custom trading
+GUIs leveraging toolkits, e.g., PyQt. Our API works in multi-threaded
+environments, and is compatible with select()/epoll() reactor-based
+networking libraries (and with Twisted_).
+
+
+How it Works
+============
+
+In order to use these Python_ bindings, you will need to
+**independently obtain a license** to the Linux C++ API from OANDA_,
+and then run a Makefile to build and install your Python_ extension
+module, linked with this API.
+
+.. figure:: doc/howitworks.png
+
+Once again, this package does **NOT** provide the include files nor
+the binary library that OANDA makes available to its subscribers. You
+need to obtain this separately (i.e., it costs money).
+
+
+
+With it, you will be able to import all of the functionality provided
+by the OANDA API with a simple import, for example::
+
+    # Import the OANDA classes.
+    from oanda import *
+
+    ...
+
+    # Login to my OANDA account.
+    fxclient = FXTrade()
+    try:
+        fxclient.login(username, password)
+    except OAException, e:
+        raise SystemExit("Could not login: %s" % e)
+
+    # Get my account object.
+    user = fxclient.getUser()
+    account = user.getAccounts()[0]
+
+    ...
+
+    # Place a trade.
+    order = MarketOrder()
+    order.base, order.quote = 'EUR', 'USD'
+    order.units = 10000
+    trades = account.execute(order)
+    for trade in trades:
+        print trade
+
+    ...
+
+
+The classes and functions names correspond directly to the
+documentation that OANDA_ will provide for your API library.
+This package's documentation only describes difference between the
+official API and our mapping into Python.
+
+Documentation
+-------------
+
+`The documentation can be found here`__.
+
+__ doc/documentation.html
+
+
+Source Code
+-----------
+
+A Mercurial repository can be found at:
+
+  https://hg.furius.ca/public/oanpy/
+
+`Click here for download instructions. </web-furius/downloading.html>`_
+
+
+Caveats
+=======
+Some information about the data feed (as of 2009):
+
+- The OANDA API can be used to write trading automatons, but is not a
+  “high-frequency” trading API by today's standards:  trade
+  confirmations take one to several seconds--contrast this with
+  connections to today's main exchanges where you can achieve a
+  turnaround time in the order of a few hundreds of microseconds. Note
+  that this is perfectly fine if your holding periods are on the order
+  of a few minutes, or even a few tens of seconds, or if you're using
+  this to automate some sort of currency hedging.
+
+- You cannot buy at the bid nor sell at the offer, i.e., OANDA forces
+  you to cross the spread in order to execute all orders, in
+  particular, limit orders. Their "limit orders" are slightly
+  different: they simply sit on their books until the spread happens
+  to cross to your order. This is a market maker, remember, you're not
+  trading directly with others, you're trading with OANDA's level 1
+  book.
+
+- The market data feed sometimes sends market data out-of-order: about
+  0.5% of all updates have timestamps that are either incorrect or not
+  flushed in sequence. The server we provide has an option to filter
+  those out.
+
+- The C++ API's network layer flushes its orders in blocks, and they
+  are not transmitted as soon as they are available on the remote
+  side. You might want to use the Java API if you want faster
+  updates... but given the delays involved in "normal" operation, I
+  doubt it's worth the effort.
+
+- OANDA indicated via its forums that its Java API is more stable than
+  its C++ API. This is most likely because their developers are more
+  comfortable with Java--whatever that may mean to you. Note: the Java
+  API is fairly clean and it is not unreasonable to consider writing
+  your code directly that API instead (if you speak Java).
+
+
+Supported Platforms: Linux
+==========================
+
+Currently, we support only the Linux_ platform (both Ubuntu 9.04 and
+Gentoo are known to work).
+
+If you are interested in support for Windows or Mac and are willing to
+pay for it by the hour, please contact `the author`__.
+
+__ /home/contact.html
+
+
+Licensing
+=========
+::
+
+  Copyright (C) 2009  Furius Enterprise / 6114750 Canada Inc.
+  Licensed under the terms of the GNU Lesser General Public License, version 3.
+  See http://furius.ca/oanpy/LICENSE for details.
+
+Notes:
+
+* The GNU LGPL allows you to write private/secret programs against the
+  library. Using this open source library does *NOT* imply that you
+  need to share your code with others. You can use the library to
+  write top-secret trading strategies to take over the world if you
+  like :-)
+
+* The license has a liability clause in it; thus Furius is not
+  responsible for any loss which you may incur as a result of using
+  this code. It is *entirely* your own responsibility to insure that
+  the code you're using works as you'd expect.
+
+* There are no guarantees that this API will get updated if the OANDA
+  API changes. You may have to do this yourself if you come to depend
+  on it. (However, it would probably be easy to do so, given you have
+  all the source code).
+
+
+Author
+======
+
+`Can be contacted here`__.
+
+__ /home/contact.html
+
+.. _OANDA: http://fxtrade.oanda.com
+.. _Python: http://python.org
+.. _Twisted: http://twistedmatrix.com
+.. _Linux: http://en.wikipedia.org/wiki/Linux
+
+

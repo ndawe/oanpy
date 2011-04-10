@@ -1,0 +1,25 @@
+/*
+ * Copyright (C) 2009  Furius Enterprise / 6114750 Canada Inc.
+ * Licensed under the terms of the GNU Lesser General Public License, version 3.
+ * See http://furius.ca/oanpy/LICENSE for details.
+ */
+@import url("/docutils-style.css");
+@import url("/project.css");
+
+
+div#project-header {
+  background-color: rgb(255, 255, 255);
+  background-image: url("etc/header-forex-chart.png");
+  background-repeat: repeat-x;
+}
+
+.quote-small {
+  font-size: smaller;
+  font-style: italic;
+  margin-left: 2em;
+  margin-right: 2em;
+}
+
+div.figure {
+  background-color: #EEE;
+}

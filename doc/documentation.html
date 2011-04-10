@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta name="generator" content="Docutils 0.6: http://docutils.sourceforge.net/" />
+<title>OanPy: Python bindings for the OANDA API</title>
+<link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+<body>
+
+<div id="project-header">
+  <a href="/"><img src="/home/furius-logo-w.png" id="logo"></a>
+  <div id="project-home"><a href="..">Project Home</a></div>
+</div>
+
+<div class="document" id="oanpy-python-bindings-for-the-oanda-api">
+<h1 class="title">OanPy: Python bindings for the OANDA API</h1>
+
+<div class="abstract topic">
+<p class="topic-title first">Abstract</p>
+<p>This file is the documentation for the Python bindings that allow
+access to the OANDA programmable API.</p>
+</div>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#introduction" id="id2">1&nbsp;&nbsp;&nbsp;Introduction</a><ul class="auto-toc">
+<li><a class="reference internal" href="#about-the-implementation" id="id3">1.1&nbsp;&nbsp;&nbsp;About the Implementation</a></li>
+<li><a class="reference internal" href="#supported-platforms" id="id4">1.2&nbsp;&nbsp;&nbsp;Supported Platforms</a></li>
+<li><a class="reference internal" href="#disclaimer" id="id5">1.3&nbsp;&nbsp;&nbsp;Disclaimer</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#build-and-installation" id="id6">2&nbsp;&nbsp;&nbsp;Build and Installation</a><ul class="auto-toc">
+<li><a class="reference internal" href="#prerequisites" id="id7">2.1&nbsp;&nbsp;&nbsp;Prerequisites</a></li>
+<li><a class="reference internal" href="#environment-notes-and-setup" id="id8">2.2&nbsp;&nbsp;&nbsp;Environment Notes and Setup</a></li>
+<li><a class="reference internal" href="#build-instructions" id="id9">2.3&nbsp;&nbsp;&nbsp;Build Instructions</a></li>
+<li><a class="reference internal" href="#installation" id="id10">2.4&nbsp;&nbsp;&nbsp;Installation</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#brief-usage-documentation" id="id11">3&nbsp;&nbsp;&nbsp;Brief Usage Documentation</a><ul class="auto-toc">
+<li><a class="reference internal" href="#account-information" id="id12">3.1&nbsp;&nbsp;&nbsp;Account Information</a></li>
+<li><a class="reference internal" href="#fetching-exchange-rates-polling" id="id13">3.2&nbsp;&nbsp;&nbsp;Fetching Exchange Rates (Polling)</a></li>
+<li><a class="reference internal" href="#subscribing-to-rate-updates" id="id14">3.3&nbsp;&nbsp;&nbsp;Subscribing to Rate Updates</a></li>
+<li><a class="reference internal" href="#order-placement" id="id15">3.4&nbsp;&nbsp;&nbsp;Order Placement</a></li>
+<li><a class="reference internal" href="#trade-confirmations" id="id16">3.5&nbsp;&nbsp;&nbsp;Trade Confirmations</a></li>
+<li><a class="reference internal" href="#fetching-historical-data" id="id17">3.6&nbsp;&nbsp;&nbsp;Fetching Historical Data</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#api-differences" id="id18">4&nbsp;&nbsp;&nbsp;API Differences</a><ul class="auto-toc">
+<li><a class="reference internal" href="#mapping-of-names" id="id19">4.1&nbsp;&nbsp;&nbsp;Mapping of Names</a><ul class="auto-toc">
+<li><a class="reference internal" href="#naming-of-classes" id="id20">4.1.1&nbsp;&nbsp;&nbsp;Naming of Classes</a></li>
+<li><a class="reference internal" href="#naming-of-methods-vs-properties" id="id21">4.1.2&nbsp;&nbsp;&nbsp;Naming of Methods vs. Properties</a></li>
+<li><a class="reference internal" href="#naming-of-enumerations" id="id22">4.1.3&nbsp;&nbsp;&nbsp;Naming of Enumerations</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#holding-references-to-objects" id="id23">4.2&nbsp;&nbsp;&nbsp;Holding References to Objects</a></li>
+<li><a class="reference internal" href="#threads-and-dispatching" id="id24">4.3&nbsp;&nbsp;&nbsp;Threads and Dispatching</a></li>
+<li><a class="reference internal" href="#integration-with-a-gui-toolkit" id="id25">4.4&nbsp;&nbsp;&nbsp;Integration with a GUI toolkit</a><ul class="auto-toc">
+<li><a class="reference internal" href="#enabling-the-background-threads" id="id26">4.4.1&nbsp;&nbsp;&nbsp;Enabling the Background Threads</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#about-timestamps" id="id27">4.5&nbsp;&nbsp;&nbsp;About Timestamps</a></li>
+<li><a class="reference internal" href="#precision-of-types-for-prices" id="id28">4.6&nbsp;&nbsp;&nbsp;Precision of Types for Prices</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#server" id="id29">5&nbsp;&nbsp;&nbsp;Server</a></li>
+<li><a class="reference internal" href="#further-questions" id="id30">6&nbsp;&nbsp;&nbsp;Further Questions</a></li>
+</ul>
+</div>
+<!-- 1  Introduction
+  1.1  About the Implementation
+  1.2  Supported Platforms
+  1.3  Disclaimer
+2  Build and Installation
+  2.1  Prerequisites
+  2.2  Environment Notes and Setup
+  2.3  Build Instructions
+  2.4  Installation
+3  Brief Usage Documentation
+  3.1  Account Information
+  3.2  Fetching Exchange Rates (Polling)
+  3.3  Subscribing to Rate Updates
+  3.4  Order Placement
+  3.5  Trade Confirmations
+  3.6  Fetching Historical Data
+4  API Differences
+  4.1  Mapping of Names
+    4.1.1  Naming of Classes
+    4.1.2  Naming of Methods vs. Properties
+    4.1.3  Naming of Enumerations
+  4.2  Holding References to Objects
+  4.3  Threads and Dispatching
+  4.4  Integration with a GUI toolkit
+    4.4.1  Enabling the Background Threads
+  4.5  About Timestamps
+  4.6  Precision of Types for Prices
+5  Server
+6  Further Questions -->
+<div class="section" id="introduction">
+<h1><a class="toc-backref" href="#id2">1&nbsp;&nbsp;&nbsp;Introduction</a></h1>
+<p>OANDA is an FX market maker which provides interesting innovations in
+the market, in particular,</p>
+<ul class="simple">
+<li>No overnight rollovers;</li>
+<li>Interest differentials paid by the second (accrued and paid at
+16h30);</li>
+<li>The ability to buy/sell any quantity, as low as one unit of any
+currency.</li>
+</ul>
+<p>This allows small players to access to the FX market without all the
+fuss that is generally required for FX trading. It also allows the
+trading of small sizes, and for the precise hedging of other
+positions.</p>
+<p>OANDA provides the ability to automate trading activities via a
+programmable interface (the OANDA API) and provides live market data
+via this interface. This is the subject of this software: it is sugar
+coating that allows you to access this API via a the powerful, dynamic
+features of the Python computer language. OANDA provides the API in a
+few other computer languages: a Java library which works across
+multiple platforms, and a C++ library, supported under Linux, Windows
+and Mac OS X.</p>
+<div class="section" id="about-the-implementation">
+<h2><a class="toc-backref" href="#id3">1.1&nbsp;&nbsp;&nbsp;About the Implementation</a></h2>
+<p>The Python bindings are built on top of the C++ libraries, and should
+be as stable or unstable as this library. All of the API is supported,
+with only minor differences due to the language translation. In
+addition, some extra functionality is provided in a Python pacakge
+which is built built on top of the API we provide.</p>
+</div>
+<div class="section" id="supported-platforms">
+<h2><a class="toc-backref" href="#id4">1.2&nbsp;&nbsp;&nbsp;Supported Platforms</a></h2>
+<p>At the time of writing, the Python bindings are complete and supported
+only on the Linux platform.</p>
+</div>
+<div class="section" id="disclaimer">
+<h2><a class="toc-backref" href="#id5">1.3&nbsp;&nbsp;&nbsp;Disclaimer</a></h2>
+<p>This software is provided under the GNU Lesser General Public License
+(LGPL), version 3. It comes with no guarantees whatsoever. In
+particular, by using this software, you agree to hold the makers of
+this software free of liability regarding any consequence of its
+direct or indirect use. You are responsible for making sure that the
+code behaves as you think it should. See the file oanpy/LICENSE for
+details.</p>
+</div>
+</div>
+<div class="section" id="build-and-installation">
+<h1><a class="toc-backref" href="#id6">2&nbsp;&nbsp;&nbsp;Build and Installation</a></h1>
+<div class="section" id="prerequisites">
+<h2><a class="toc-backref" href="#id7">2.1&nbsp;&nbsp;&nbsp;Prerequisites</a></h2>
+<p>You will need to install:</p>
+<ul class="simple">
+<li>Python 2.x, along with its static library and include files;</li>
+<li>Boost: we only link against the Boost.Python and Boost.Thread
+libraries;</li>
+<li>The GCC compiler (version 4 or greater should do);</li>
+<li>Scons, in order to build the source code into a module.</li>
+</ul>
+<p>If you will use the <cite>oanserv</cite> server, in addition you will need:</p>
+<ul class="simple">
+<li>Twisted (e.g. 2.5 or more recent)</li>
+<li>Version 2.6 of Python, or greater (because of the
+<cite>collections.nametuple</cite> class which we use).</li>
+</ul>
+</div>
+<div class="section" id="environment-notes-and-setup">
+<h2><a class="toc-backref" href="#id8">2.2&nbsp;&nbsp;&nbsp;Environment Notes and Setup</a></h2>
+<p>The code we provide does <strong>not</strong> include the client from OANDA's API
+(libfxclient.a and header files). You need to purchase your own
+license and obtain this library from them, as the API agreement
+clearly states that we cannot provide it to any thirdparty.</p>
+<p>Set the <cite>OANDA_API</cite> environment variable to indicate the build
+programs where you have unpacked the header files and C++ library,
+e.g.:</p>
+<pre class="literal-block">
+OANDA_API = $(HOME)/fxclient/
+export OANDA_API
+</pre>
+</div>
+<div class="section" id="build-instructions">
+<h2><a class="toc-backref" href="#id9">2.3&nbsp;&nbsp;&nbsp;Build Instructions</a></h2>
+<pre class="literal-block">
+cd src/
+scons      # build
+scons -c   # clean up
+</pre>
+<p>The output should look something like this:</p>
+<pre class="literal-block">
+scons: done cleaning targets.
+tangerine:~/p/oanpy/src$ scons
+scons: Reading SConscript files ...
+scons: done reading SConscript files.
+scons: Building targets ...
+g++ -o oanda.os -c -fPIC oanda.cpp
+g++ -E -I/usr/include/python2.6 pchboost.h &gt; pchboost.hpp
+g++ -o data.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+  -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. data.cpp
+g++ -o extras.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+  -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. extras.cpp
+g++ -o init.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+  -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. init.cpp
+g++ -o events.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+  -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. events.cpp
+g++ -o exception.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+   -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. exception.cpp
+g++ -o orders.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+  -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. orders.cpp
+g++ -o connect.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+  -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. connect.cpp
+ar rc liboanpy.a exception.os connect.os data.os events.os orders.os extras.os \
+  init.os ranlib liboanpy.a
+g++ -o _oanda.so -shared -fvisibility=hidden -fvisibility-inlines-hidden \
+  --strip-all oanda.os -L/home/blais/p/oanpy/include -L. \
+  -lnsl -lm -lc -lpthread -ldl -lz -lcrypto -lrt -lexpat \
+  -lboost_python -lboost_thread -loanpy -lfxclient
+Install file: &quot;_oanda.so&quot; as &quot;/home/blais/p/oanpy/lib/python/oanda/_oanda.so&quot;
+scons: done building targets.
+</pre>
+<p>The target DSO should sit in <cite>lib/python/oanda/_oanda.so</cite>. This should
+be a working Python extension module (though it is not meant to be
+imported directly, the oanda package takes care of that, and adds code
+written in pure Python as well), see <cite>oanda/__init__.py</cite>.</p>
+</div>
+<div class="section" id="installation">
+<h2><a class="toc-backref" href="#id10">2.4&nbsp;&nbsp;&nbsp;Installation</a></h2>
+<p>Run the usual distutil procedure to have the files installed in your
+Python distribution:</p>
+<pre class="literal-block">
+python setup.py install
+</pre>
+<p>To test the installation, try to import the module; if no error
+occurs, it worked:</p>
+<pre class="literal-block">
+tangerine:~$ python
+Python 2.6.2 (release26-maint, Apr 19 2009, 01:56:41)
+[GCC 4.3.3] on linux2
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import oanda
+&gt;&gt;&gt;
+</pre>
+<p>(Note: the <cite>oanda</cite> package imports the <cite>_oanda.so</cite> DSO itself.)</p>
+</div>
+</div>
+<div class="section" id="brief-usage-documentation">
+<h1><a class="toc-backref" href="#id11">3&nbsp;&nbsp;&nbsp;Brief Usage Documentation</a></h1>
+<div class="section" id="account-information">
+<h2><a class="toc-backref" href="#id12">3.1&nbsp;&nbsp;&nbsp;Account Information</a></h2>
+<p>You create a connection by instantiating a &#8220;client&#8221;: either an
+<cite>FXGame</cite> or an <cite>FXTrade</cite> object. Note that <strong>before</strong> you call the
+<cite>login()</cite> method, you may have to set some of the general connection
+parameters:</p>
+<pre class="literal-block">
+fxclient = FXTrade()
+try:
+    fxclient.login(username, password)
+except OAException, e:
+    raise SystemExit(&quot;Could not login: %s&quot; % e)
+
+[...]
+
+fxclient.logout()
+</pre>
+</div>
+<div class="section" id="fetching-exchange-rates-polling">
+<h2><a class="toc-backref" href="#id13">3.2&nbsp;&nbsp;&nbsp;Fetching Exchange Rates (Polling)</a></h2>
+<p>Get a single rate via the global object <cite>RateTable</cite>:</p>
+<pre class="literal-block">
+tick = fxclient.getRateTable().getRate(Pair('USD/CAD'))
+</pre>
+</div>
+<div class="section" id="subscribing-to-rate-updates">
+<h2><a class="toc-backref" href="#id14">3.3&nbsp;&nbsp;&nbsp;Subscribing to Rate Updates</a></h2>
+<p>The OANDA API requires you to derive from the <cite>RateEvent</cite> class in order to subcribe
+and handle market data events. This works the same way with Python, create a new
+class and override its <cite>handle()</cite> method:</p>
+<pre class="literal-block">
+from oanda import RateEvent
+
+class RatesMonitor(oanda.RateEvent):
+
+    def match(self, event_info):
+        # Return false if you don't want to handle this (default is True).
+
+    def handle(self, event_info, event_manager):
+        # Handle the market data update.
+
+[...]
+
+# Enable the rate thread (important).
+fxclient.setWithRateThread(True)
+
+mon = RatesMonitor()
+fxclient.getRateTable().eventManager().add(mon)
+</pre>
+</div>
+<div class="section" id="order-placement">
+<h2><a class="toc-backref" href="#id15">3.4&nbsp;&nbsp;&nbsp;Order Placement</a></h2>
+<p>To place orders, create the class corresponding to the type of order
+you'd like to place, and execute it on the account. You will get a
+list of &#8220;trade&#8221; objects back, that correspond to your orders (the name
+is poorly chosen, but that's from the API so I prefer not to change
+it):</p>
+<pre class="literal-block">
+order = MarketOrder()
+order.base, order.quote = pair.split('/')
+order.units = 1
+modtrades = acc.execute(order)
+for trade in modtrades:
+    print
+    print '  ', str(trade)
+</pre>
+</div>
+<div class="section" id="trade-confirmations">
+<h2><a class="toc-backref" href="#id16">3.5&nbsp;&nbsp;&nbsp;Trade Confirmations</a></h2>
+<p>Monitor trade confirmations works similarly as for rate updates,
+they're called &#8220;Account events&#8221;:</p>
+<pre class="literal-block">
+from oanda import AccountEvent
+
+class AccountEventsMonitor(oanda.AccountEvent):
+
+    def handle(self, event_info, event_manager):
+        # Handle the account event.
+
+[...]
+
+# Enable the rate thread (important).
+fxclient.setWithRateThread(True)
+
+user = fxclient.getUser()
+for acc in user.getAccounts():
+    mon = AccountEventsMonitor(acc)
+    acc.eventManager().add(mon)
+</pre>
+</div>
+<div class="section" id="fetching-historical-data">
+<h2><a class="toc-backref" href="#id17">3.6&nbsp;&nbsp;&nbsp;Fetching Historical Data</a></h2>
+<p>See the <cite>RateTable.getHistory()</cite> methods. Instead of taking a vector
+as input, they are modified to return Python <cite>list</cite> objects with the
+results.</p>
+</div>
+</div>
+<div class="section" id="api-differences">
+<h1><a class="toc-backref" href="#id18">4&nbsp;&nbsp;&nbsp;API Differences</a></h1>
+<div class="section" id="mapping-of-names">
+<h2><a class="toc-backref" href="#id19">4.1&nbsp;&nbsp;&nbsp;Mapping of Names</a></h2>
+<p>Because the Python API is a direct mapping on top of the C++ API, we
+do not provide documentation specific to it other than this document.
+The main reference should be the include files that you should have
+obtained once you acquired the license from OANDA itself. This file
+only documents the differences between the C++ version of the OANDA
+API and the Python view that we provide..</p>
+<div class="section" id="naming-of-classes">
+<h3><a class="toc-backref" href="#id20">4.1.1&nbsp;&nbsp;&nbsp;Naming of Classes</a></h3>
+<p>The names of the Python classes are the same as those of the C++ API,
+except for one thing: for consistency, we have removed the &#8220;FX&#8221; prefix
+from the class names that had them in the C++ API, except for the
+FXClient, FXGame and FXTrade object (the OANDA interface is
+inconsistent in this way, some of its classes are prefixed and some
+are not).</p>
+<p>This includes the following renamings:</p>
+<pre class="literal-block">
+FXAccountEvent            -&gt;    AccountEvent
+FXAccountEventInfo        -&gt;    AccountEventInfo
+FXEvent                   -&gt;    Event
+FXEventInfo               -&gt;    EventInfo
+FXEventManager            -&gt;    EventManager
+FXHistoryPoint            -&gt;    HistoryPoint
+FXInstrument              -&gt;    Instrument
+FXPair                    -&gt;    Pair
+FXRateEvent               -&gt;    RateEvent
+FXRateEventInfo           -&gt;    RateEventInfo
+FXTick                    -&gt;    Tick
+FXTransactionType         -&gt;    TransactionType
+</pre>
+<p>(Note: if you insist on using the original names, you can do that too,
+because we also provide aliases for all the original class names as
+well, e.g. <cite>FXTick</cite> and <cite>Tick</cite> reference the very same class object.)</p>
+</div>
+<div class="section" id="naming-of-methods-vs-properties">
+<h3><a class="toc-backref" href="#id21">4.1.2&nbsp;&nbsp;&nbsp;Naming of Methods vs. Properties</a></h3>
+<p>The methods on C++ classes are exposed on Python classes as either
+methods or &#8220;properties&#8221;, which look like attributes.</p>
+<p><em>Methods</em></p>
+<blockquote>
+<p>If the name of the C++ method is a verb/action, it is exposed as a
+method on the Python class, e.g.:</p>
+<pre class="literal-block">
+tick = rate_table.getRate('EUR/USD')
+...
+itick = tick.getInverse()    # Call a method on the Tick class.
+</pre>
+</blockquote>
+<p><em>Properties</em></p>
+<blockquote>
+<p>However, if a function was meant to provide read-only data, or two
+accessors were provided to read and write a data attribute, we are
+providing the functions via Python properties. This means that you
+can read and write the attribute using the usual attribute syntax,
+e.g.:</p>
+<pre class="literal-block">
+print tick.bid    # Reading the 'bid' attribute
+tick.bid += 0.01  # Writing the 'bid' attribute
+</pre>
+</blockquote>
+</div>
+<div class="section" id="naming-of-enumerations">
+<h3><a class="toc-backref" href="#id22">4.1.3&nbsp;&nbsp;&nbsp;Naming of Enumerations</a></h3>
+<p>C++ &#8220;enum&#8220; types are provided as special objects with the same name as
+their C++ type, with attributes for their specific values, e.g.:</p>
+<pre class="literal-block">
+rate_table.getHistory(Pair('EUR/USD'),
+                      INTERVAL.INTERVAL_10_SEC,   # &lt;-- (enum)
+                      60)
+</pre>
+</div>
+</div>
+<div class="section" id="holding-references-to-objects">
+<h2><a class="toc-backref" href="#id23">4.2&nbsp;&nbsp;&nbsp;Holding References to Objects</a></h2>
+<p>During the development of the bindings, I have occasionally exposed
+some of the transient objects provided by the callbacks, to the Python
+side. Keeping and using a reference to those objects from Python would
+cause a core dump (the C++ objects get freed within the OANDA C++
+library).</p>
+<p>The solution is rather inelegant: create a copy of the objects
+whenever a callback is invoked. This is what is being done at the
+moment but it really is the lesser of two evils. In any case, you
+should try to avoid keeping around objects provided to you by callback
+methods (or make copies of them instead).</p>
+<p>Note: if someone feels like working out a scheme with the Python
+interpreter's <cite>weakptr</cite> type, this could be a clean solution for this
+problem (interesting little project).</p>
+</div>
+<div class="section" id="threads-and-dispatching">
+<h2><a class="toc-backref" href="#id24">4.3&nbsp;&nbsp;&nbsp;Threads and Dispatching</a></h2>
+<p>The C++ client library uses a background thread to dispatch the rate
+and account event callbacks. Because of limitations around the global
+Python interperter lock, we need to queue the events and let you
+choose the preferred method for dispatching them in the main Python
+thread or otherwise. This requires you to choose a preferred
+technique.</p>
+<p>There are four methods for dispatch the events:</p>
+<ol class="arabic simple">
+<li>Blocking Call: You call the <cite>fxevents_process_loop()</cite> function,
+which will block and dispatch the events as they come. This becomes
+your main loop.</li>
+<li>Polling: this is a variant on the previous method, where you are
+simply call a non-blocking version of the dispatcher at regular
+intervals (<cite>fxevents_process_pending()</cite>).</li>
+<li>In another Python thread: you create a separate thread in Python to
+handle the blocking call in (1).</li>
+<li>Using <cite>select()</cite>: you block on a call to <cite>select()</cite>, juggling the
+I/O of data on sockets and the dispatching of queued events. The
+module allows you to set a file descriptor that it writes a single
+byte to when a new event has arrived. This wakes up the <cite>select()</cite>
+call and you can dispatch the events immediately.</li>
+</ol>
+<p>There are examples for each of these methods in
+<cite>lib/python/oanda/dispatch.py</cite>. The example code for the
+<cite>select()</cite>-based dispatch uses xTwisted.</p>
+</div>
+<div class="section" id="integration-with-a-gui-toolkit">
+<h2><a class="toc-backref" href="#id25">4.4&nbsp;&nbsp;&nbsp;Integration with a GUI toolkit</a></h2>
+<p>I have not yet completed integration with a GUI toolkit. I've been
+meaning to write a GUI application using PyQt. I think it would work
+like this:</p>
+<ul class="simple">
+<li>Your execution loop in the main UI/Python thread would be the GUI's
+loop, without modification.</li>
+<li>You would dispatch messages via a separate Python-level thread,
+which would either<ol class="loweralpha">
+<li>Wake up the GUI loop/thread using a &#8220;custom GUI event&#8221;, and you
+would have this event trigger a callback in the main thread to
+dispatch the events using <cite>fxevents_process_pending()</cite>.</li>
+<li>Dispatch the messages directly from the other Python thread,
+which is possible because of the GIL restriction (no other Python
+code will be able to run in the same PVM during this time). You
+would need to be careful with thread-local data and non-Python
+locking issues.</li>
+</ol>
+</li>
+</ul>
+<div class="section" id="enabling-the-background-threads">
+<h3><a class="toc-backref" href="#id26">4.4.1&nbsp;&nbsp;&nbsp;Enabling the Background Threads</a></h3>
+<p>If you don't seem to get rate or historical data, make sure you have
+enabled the rate-thread before logging in (see chat log below).</p>
+</div>
+</div>
+<div class="section" id="about-timestamps">
+<h2><a class="toc-backref" href="#id27">4.5&nbsp;&nbsp;&nbsp;About Timestamps</a></h2>
+<p>Be careful when initializing objects with timestamps, the expected
+time resolution is in seconds, and if you use Python's time.time()
+function, it returns a float. You will need to convert that to an int
+to use the API functions.</p>
+</div>
+<div class="section" id="precision-of-types-for-prices">
+<h2><a class="toc-backref" href="#id28">4.6&nbsp;&nbsp;&nbsp;Precision of Types for Prices</a></h2>
+<p>The OANDA API provides prices as C type <cite>double</cite>, which is unwise, due
+to rounding error. See the module <cite>lib/python/oanda/prices.py</cite> which
+provides functions to convert to <cite>Decimal</cite> or <cite>int</cite> Python objects.</p>
+</div>
+</div>
+<div class="section" id="server">
+<h1><a class="toc-backref" href="#id29">5&nbsp;&nbsp;&nbsp;Server</a></h1>
+<p>The code includes <cite>oanserv</cite>, a program that will connect to the API
+and serve market data on a port. Look at the code for details. There
+is also a watchdog process that will insure that this server is always
+up (the OANDA C++ API crashes every now and then, for some reason).</p>
+<p>A description of the simple protocol uses to connect to this server
+can be <a class="reference external" href="protocols.html">found here</a>.</p>
+</div>
+<div class="section" id="further-questions">
+<h1><a class="toc-backref" href="#id30">6&nbsp;&nbsp;&nbsp;Further Questions</a></h1>
+<p>I offer <em>no free support</em> on this software.</p>
+<p>However, if you really need help on specific issues, I <em>may</em> be able
+to offer by-the-hour consulting. See
+<a class="reference external" href="http://furius.ca/home/contact.html">http://furius.ca/home/contact.html</a> for information on how to contact
+me.</p>
+</div>
+</div>
+</body>
+</html>

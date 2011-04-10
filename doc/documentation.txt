@@ -1,0 +1,512 @@
+==============================================
+   OanPy: Python bindings for the OANDA API
+==============================================
+:Abstract:
+
+  This file is the documentation for the Python bindings that allow
+  access to the OANDA programmable API.
+
+
+.. section-numbering::
+.. contents::
+..
+    1  Introduction
+      1.1  About the Implementation
+      1.2  Supported Platforms
+      1.3  Disclaimer
+    2  Build and Installation
+      2.1  Prerequisites
+      2.2  Environment Notes and Setup
+      2.3  Build Instructions
+      2.4  Installation
+    3  Brief Usage Documentation
+      3.1  Account Information
+      3.2  Fetching Exchange Rates (Polling)
+      3.3  Subscribing to Rate Updates
+      3.4  Order Placement
+      3.5  Trade Confirmations
+      3.6  Fetching Historical Data
+    4  API Differences
+      4.1  Mapping of Names
+        4.1.1  Naming of Classes
+        4.1.2  Naming of Methods vs. Properties
+        4.1.3  Naming of Enumerations
+      4.2  Holding References to Objects
+      4.3  Threads and Dispatching
+      4.4  Integration with a GUI toolkit
+        4.4.1  Enabling the Background Threads
+      4.5  About Timestamps
+      4.6  Precision of Types for Prices
+    5  Server
+    6  Further Questions
+
+
+Introduction
+============
+
+OANDA is an FX market maker which provides interesting innovations in
+the market, in particular,
+
+- No overnight rollovers;
+- Interest differentials paid by the second (accrued and paid at
+  16h30);
+- The ability to buy/sell any quantity, as low as one unit of any
+  currency.
+
+This allows small players to access to the FX market without all the
+fuss that is generally required for FX trading. It also allows the
+trading of small sizes, and for the precise hedging of other
+positions.
+
+OANDA provides the ability to automate trading activities via a
+programmable interface (the OANDA API) and provides live market data
+via this interface. This is the subject of this software: it is sugar
+coating that allows you to access this API via a the powerful, dynamic
+features of the Python computer language. OANDA provides the API in a
+few other computer languages: a Java library which works across
+multiple platforms, and a C++ library, supported under Linux, Windows
+and Mac OS X.
+
+About the Implementation
+------------------------
+
+The Python bindings are built on top of the C++ libraries, and should
+be as stable or unstable as this library. All of the API is supported,
+with only minor differences due to the language translation. In
+addition, some extra functionality is provided in a Python pacakge
+which is built built on top of the API we provide.
+
+Supported Platforms
+-------------------
+
+At the time of writing, the Python bindings are complete and supported
+only on the Linux platform.
+
+Disclaimer
+----------
+
+This software is provided under the GNU Lesser General Public License
+(LGPL), version 3. It comes with no guarantees whatsoever. In
+particular, by using this software, you agree to hold the makers of
+this software free of liability regarding any consequence of its
+direct or indirect use. You are responsible for making sure that the
+code behaves as you think it should. See the file oanpy/LICENSE for
+details.
+
+
+Build and Installation
+======================
+
+Prerequisites
+-------------
+
+You will need to install:
+
+- Python 2.x, along with its static library and include files;
+
+- Boost: we only link against the Boost.Python and Boost.Thread
+  libraries;
+
+- The GCC compiler (version 4 or greater should do);
+
+- Scons, in order to build the source code into a module.
+
+If you will use the `oanserv` server, in addition you will need:
+
+- Twisted (e.g. 2.5 or more recent)
+- Version 2.6 of Python, or greater (because of the
+  `collections.nametuple` class which we use).
+
+
+Environment Notes and Setup
+---------------------------
+
+The code we provide does **not** include the client from OANDA's API
+(libfxclient.a and header files). You need to purchase your own
+license and obtain this library from them, as the API agreement
+clearly states that we cannot provide it to any thirdparty.
+
+Set the `OANDA_API` environment variable to indicate the build
+programs where you have unpacked the header files and C++ library,
+e.g.::
+
+   OANDA_API = $(HOME)/fxclient/
+   export OANDA_API
+
+
+Build Instructions
+------------------
+::
+
+  cd src/
+  scons      # build
+  scons -c   # clean up
+
+The output should look something like this::
+
+  scons: done cleaning targets.
+  tangerine:~/p/oanpy/src$ scons
+  scons: Reading SConscript files ...
+  scons: done reading SConscript files.
+  scons: Building targets ...
+  g++ -o oanda.os -c -fPIC oanda.cpp
+  g++ -E -I/usr/include/python2.6 pchboost.h > pchboost.hpp
+  g++ -o data.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+    -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. data.cpp
+  g++ -o extras.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+    -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. extras.cpp
+  g++ -o init.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+    -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. init.cpp
+  g++ -o events.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+    -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. events.cpp
+  g++ -o exception.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+     -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. exception.cpp
+  g++ -o orders.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+    -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. orders.cpp
+  g++ -o connect.os -c -fvisibility=hidden -fvisibility-inlines-hidden -fPIC \
+    -I/usr/include/python2.6 -I/home/blais/p/oanpy/include -I. connect.cpp
+  ar rc liboanpy.a exception.os connect.os data.os events.os orders.os extras.os \
+    init.os ranlib liboanpy.a
+  g++ -o _oanda.so -shared -fvisibility=hidden -fvisibility-inlines-hidden \
+    --strip-all oanda.os -L/home/blais/p/oanpy/include -L. \
+    -lnsl -lm -lc -lpthread -ldl -lz -lcrypto -lrt -lexpat \
+    -lboost_python -lboost_thread -loanpy -lfxclient
+  Install file: "_oanda.so" as "/home/blais/p/oanpy/lib/python/oanda/_oanda.so"
+  scons: done building targets.
+
+The target DSO should sit in `lib/python/oanda/_oanda.so`. This should
+be a working Python extension module (though it is not meant to be
+imported directly, the oanda package takes care of that, and adds code
+written in pure Python as well), see `oanda/__init__.py`.
+
+
+Installation
+------------
+
+Run the usual distutil procedure to have the files installed in your
+Python distribution::
+
+   python setup.py install
+
+To test the installation, try to import the module; if no error
+occurs, it worked::
+
+  tangerine:~$ python
+  Python 2.6.2 (release26-maint, Apr 19 2009, 01:56:41)
+  [GCC 4.3.3] on linux2
+  Type "help", "copyright", "credits" or "license" for more information.
+  >>> import oanda
+  >>>
+
+(Note: the `oanda` package imports the `_oanda.so` DSO itself.)
+
+
+
+Brief Usage Documentation
+=========================
+
+Account Information
+-------------------
+You create a connection by instantiating a “client”: either an
+`FXGame` or an `FXTrade` object. Note that **before** you call the
+`login()` method, you may have to set some of the general connection
+parameters::
+
+    fxclient = FXTrade()
+    try:
+        fxclient.login(username, password)
+    except OAException, e:
+        raise SystemExit("Could not login: %s" % e)
+
+    [...]
+
+    fxclient.logout()
+
+
+Fetching Exchange Rates (Polling)
+---------------------------------
+Get a single rate via the global object `RateTable`::
+
+  tick = fxclient.getRateTable().getRate(Pair('USD/CAD'))
+
+
+Subscribing to Rate Updates
+---------------------------
+The OANDA API requires you to derive from the `RateEvent` class in order to subcribe
+and handle market data events. This works the same way with Python, create a new
+class and override its `handle()` method::
+
+  from oanda import RateEvent
+
+  class RatesMonitor(oanda.RateEvent):
+
+      def match(self, event_info):
+          # Return false if you don't want to handle this (default is True).
+
+      def handle(self, event_info, event_manager):
+          # Handle the market data update.
+
+  [...]
+
+  # Enable the rate thread (important).
+  fxclient.setWithRateThread(True)
+
+  mon = RatesMonitor()
+  fxclient.getRateTable().eventManager().add(mon)
+
+
+Order Placement
+---------------
+To place orders, create the class corresponding to the type of order
+you'd like to place, and execute it on the account. You will get a
+list of “trade” objects back, that correspond to your orders (the name
+is poorly chosen, but that's from the API so I prefer not to change
+it)::
+
+    order = MarketOrder()
+    order.base, order.quote = pair.split('/')
+    order.units = 1
+    modtrades = acc.execute(order)
+    for trade in modtrades:
+        print
+        print '  ', str(trade)
+
+
+Trade Confirmations
+-------------------
+
+Monitor trade confirmations works similarly as for rate updates,
+they're called “Account events”::
+
+  from oanda import AccountEvent
+
+  class AccountEventsMonitor(oanda.AccountEvent):
+
+      def handle(self, event_info, event_manager):
+          # Handle the account event.
+
+  [...]
+
+  # Enable the rate thread (important).
+  fxclient.setWithRateThread(True)
+
+  user = fxclient.getUser()
+  for acc in user.getAccounts():
+      mon = AccountEventsMonitor(acc)
+      acc.eventManager().add(mon)
+
+
+Fetching Historical Data
+------------------------
+See the `RateTable.getHistory()` methods. Instead of taking a vector
+as input, they are modified to return Python `list` objects with the
+results.
+
+
+
+API Differences
+===============
+
+Mapping of Names
+----------------
+
+Because the Python API is a direct mapping on top of the C++ API, we
+do not provide documentation specific to it other than this document.
+The main reference should be the include files that you should have
+obtained once you acquired the license from OANDA itself. This file
+only documents the differences between the C++ version of the OANDA
+API and the Python view that we provide..
+
+Naming of Classes
+~~~~~~~~~~~~~~~~~
+
+The names of the Python classes are the same as those of the C++ API,
+except for one thing: for consistency, we have removed the “FX” prefix
+from the class names that had them in the C++ API, except for the
+FXClient, FXGame and FXTrade object (the OANDA interface is
+inconsistent in this way, some of its classes are prefixed and some
+are not).
+
+This includes the following renamings::
+
+  FXAccountEvent            ->    AccountEvent
+  FXAccountEventInfo        ->    AccountEventInfo
+  FXEvent                   ->    Event
+  FXEventInfo               ->    EventInfo
+  FXEventManager            ->    EventManager
+  FXHistoryPoint            ->    HistoryPoint
+  FXInstrument              ->    Instrument
+  FXPair                    ->    Pair
+  FXRateEvent               ->    RateEvent
+  FXRateEventInfo           ->    RateEventInfo
+  FXTick                    ->    Tick
+  FXTransactionType         ->    TransactionType
+
+(Note: if you insist on using the original names, you can do that too,
+because we also provide aliases for all the original class names as
+well, e.g. `FXTick` and `Tick` reference the very same class object.)
+
+Naming of Methods vs. Properties
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The methods on C++ classes are exposed on Python classes as either
+methods or “properties”, which look like attributes.
+
+*Methods*
+
+  If the name of the C++ method is a verb/action, it is exposed as a
+  method on the Python class, e.g.::
+
+    tick = rate_table.getRate('EUR/USD')
+    ...
+    itick = tick.getInverse()    # Call a method on the Tick class.
+
+*Properties*
+
+  However, if a function was meant to provide read-only data, or two
+  accessors were provided to read and write a data attribute, we are
+  providing the functions via Python properties. This means that you
+  can read and write the attribute using the usual attribute syntax,
+  e.g.::
+
+    print tick.bid    # Reading the 'bid' attribute
+    tick.bid += 0.01  # Writing the 'bid' attribute
+
+Naming of Enumerations
+~~~~~~~~~~~~~~~~~~~~~~
+
+C++ “enum“ types are provided as special objects with the same name as
+their C++ type, with attributes for their specific values, e.g.::
+
+  rate_table.getHistory(Pair('EUR/USD'),
+                        INTERVAL.INTERVAL_10_SEC,   # <-- (enum)
+                        60)
+
+
+Holding References to Objects
+-----------------------------
+
+During the development of the bindings, I have occasionally exposed
+some of the transient objects provided by the callbacks, to the Python
+side. Keeping and using a reference to those objects from Python would
+cause a core dump (the C++ objects get freed within the OANDA C++
+library).
+
+The solution is rather inelegant: create a copy of the objects
+whenever a callback is invoked. This is what is being done at the
+moment but it really is the lesser of two evils. In any case, you
+should try to avoid keeping around objects provided to you by callback
+methods (or make copies of them instead).
+
+Note: if someone feels like working out a scheme with the Python
+interpreter's `weakptr` type, this could be a clean solution for this
+problem (interesting little project).
+
+
+Threads and Dispatching
+-----------------------
+
+The C++ client library uses a background thread to dispatch the rate
+and account event callbacks. Because of limitations around the global
+Python interperter lock, we need to queue the events and let you
+choose the preferred method for dispatching them in the main Python
+thread or otherwise. This requires you to choose a preferred
+technique.
+
+There are four methods for dispatch the events:
+
+1. Blocking Call: You call the `fxevents_process_loop()` function,
+   which will block and dispatch the events as they come. This becomes
+   your main loop.
+
+2. Polling: this is a variant on the previous method, where you are
+   simply call a non-blocking version of the dispatcher at regular
+   intervals (`fxevents_process_pending()`).
+
+3. In another Python thread: you create a separate thread in Python to
+   handle the blocking call in (1).
+
+4. Using `select()`: you block on a call to `select()`, juggling the
+   I/O of data on sockets and the dispatching of queued events. The
+   module allows you to set a file descriptor that it writes a single
+   byte to when a new event has arrived. This wakes up the `select()`
+   call and you can dispatch the events immediately.
+
+There are examples for each of these methods in
+`lib/python/oanda/dispatch.py`. The example code for the
+`select()`-based dispatch uses xTwisted.
+
+
+Integration with a GUI toolkit
+------------------------------
+
+I have not yet completed integration with a GUI toolkit. I've been
+meaning to write a GUI application using PyQt. I think it would work
+like this:
+
+- Your execution loop in the main UI/Python thread would be the GUI's
+  loop, without modification.
+
+- You would dispatch messages via a separate Python-level thread,
+  which would either
+
+  a) Wake up the GUI loop/thread using a “custom GUI event”, and you
+     would have this event trigger a callback in the main thread to
+     dispatch the events using `fxevents_process_pending()`.
+
+  b) Dispatch the messages directly from the other Python thread,
+     which is possible because of the GIL restriction (no other Python
+     code will be able to run in the same PVM during this time). You
+     would need to be careful with thread-local data and non-Python
+     locking issues.
+
+
+
+Enabling the Background Threads
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you don't seem to get rate or historical data, make sure you have
+enabled the rate-thread before logging in (see chat log below).
+
+
+About Timestamps
+----------------
+
+Be careful when initializing objects with timestamps, the expected
+time resolution is in seconds, and if you use Python's time.time()
+function, it returns a float. You will need to convert that to an int
+to use the API functions.
+
+
+Precision of Types for Prices
+-----------------------------
+
+The OANDA API provides prices as C type `double`, which is unwise, due
+to rounding error. See the module `lib/python/oanda/prices.py` which
+provides functions to convert to `Decimal` or `int` Python objects.
+
+
+Server
+======
+
+The code includes `oanserv`, a program that will connect to the API
+and serve market data on a port. Look at the code for details. There
+is also a watchdog process that will insure that this server is always
+up (the OANDA C++ API crashes every now and then, for some reason).
+
+A description of the simple protocol uses to connect to this server
+can be `found here`__.
+
+__ protocols.html
+
+
+Further Questions
+=================
+
+I offer *no free support* on this software.
+
+However, if you really need help on specific issues, I *may* be able
+to offer by-the-hour consulting. See
+http://furius.ca/home/contact.html for information on how to contact
+me.
+

@@ -1,0 +1,11 @@
+This Python package contains code that is used to implement a
+client-side server that accepts connections and subscriptions to
+specific instrument updates. This allows one to internally feed market
+data to several disconnected programs with a single connection to
+OANDA.
+
+IMPORTANT: You are responsible for insuring your own compliance with
+the OANDA terms for market data redistribution; therefore, you should
+not open such a service on a public port. The intention of this
+program is for you to decouple your own programs (internally) from the
+OANDA API connections, for market data updates.

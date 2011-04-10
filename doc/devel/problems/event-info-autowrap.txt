@@ -1,0 +1,35 @@
+
+[Switching to Thread 0xb72ad490 (LWP 18549)]
+0x080d8d05 in PyErr_Restore ()
+(gdb) where
+#0  0x080d8d05 in PyErr_Restore ()
+#1  0x080d8dde in PyErr_SetObject ()
+#2  0xb76aff70 in boost::python::converter::registration::to_python () from /usr/lib/libboost_python-gcc42-1_34_1.so.1.34.1
+#3  0xb76c2fa4 in boost::python::converter::detail::arg_to_python_base::arg_to_python_base () from /usr/lib/libboost_python-gcc42-1_34_1.so.1.34.1
+#4  0xb7b4cc40 in boost::python::converter::detail::pointer_deep_arg_to_python<Oanda::FXEventInfo const*>::pointer_deep_arg_to_python ()
+   from /home/blais/p/oanpy/src/build/linux/oanda.so
+#5  0xb7b4cc78 in boost::python::converter::arg_to_python<Oanda::FXEventInfo const*>::arg_to_python () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#6  0xb7b4cca3 in boost::python::override::operator()<Oanda::FXEventInfo const*> () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#7  0xb7b36fbc in (anonymous namespace)::EventWrap<Oanda::FXAccountEvent, char>::match () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#8  0xb7b8ff89 in Oanda::FXEventManagerImplementation<Oanda::FXTransactionType, Oanda::FXAccountEvent, Oanda::FXAccountEventInfo>::_fire ()
+   from /home/blais/p/oanpy/src/build/linux/oanda.so
+#9  0xb7b7e0fa in Oanda::FXAccountEventManagerReal::notify () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#10 0xb7b7e7bc in Oanda::Account::refreshTransactions () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#11 0xb7b84f15 in Oanda::Account::_getTransactions () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#12 0xb7b850d9 in Oanda::FXAccountEventManagerReal::_refresh () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#13 0xb7b94107 in Oanda::Session::_refreshAndService () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#14 0xb7bbb187 in Oanda::FXEventThread::run () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#15 0xb7bbb6a1 in Oanda::start_routine () from /home/blais/p/oanpy/src/build/linux/oanda.so
+#16 0xb7f904fb in start_thread () from /lib/tls/i686/cmov/libpthread.so.0
+#17 0xb7ee4e5e in clone () from /lib/tls/i686/cmov/libc.so.6
+(gdb) quit
+The program is running.  Exit anyway? (y or n) y
+tangerine:~/p/oanpy/src$ pytest -xs test/test_events.py -k 'test_evinfo'
+inserting into sys.path: /home/blais/src/pypy-dist
+==================================================================== test process starts ====================================================================
+executable:   /usr/bin/python  (2.5.2-final-0)
+using py lib: /home/blais/src/pypy-dist/py <rev 57525>
+
+test/test_events.py[8] ssssss.s
+
+

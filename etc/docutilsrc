@@ -1,0 +1,3 @@
+README index.html @header
+doc/documentation.txt doc/documentation.html @header
+doc/faq.txt doc/faq.html @header

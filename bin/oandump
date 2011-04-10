@@ -1,0 +1,513 @@
+#!/usr/bin/env python
+# Copyright (C) 2009  Furius Enterprise / 6114750 Canada Inc.
+# Licensed under the terms of the GNU Lesser General Public License, version 3.
+# See http://furius.ca/oanpy/LICENSE for details.
+"""
+Utility to manipulate OANDA market data dumpfiles.
+"""
+
+# stdlib imports
+import sys, os, re, logging
+from time import time, mktime
+from datetime import datetime
+from os.path import *
+
+# oanda imports
+from oanda.prices import i2d
+
+# oanserv imports
+from oanserv.dumpfile import opendump, opendump_stdin
+from oanserv.protodef import RateProtoDef
+from oanserv.times import parse_time
+from oanserv.rateserv import RateServerFactory
+from oanserv.ext.texan import TexanProtocol
+
+
+
+#-------------------------------------------------------------------------------
+
+class CmdInfo(object):
+    """ Provide information on the dumpfile. """
+
+    names = ['info']
+    nargs = 0
+
+    pfx = '   '
+
+    def execute(self, args, dumpfiles):
+        for dumpf in dumpfiles:
+            print dumpf.name
+            print self.pfx + "Format:   %s"  % dumpf.codecname
+            print self.pfx + "Messages: %s"  % len(dumpf)
+            if len(dumpf) > 0:
+                msg1 = dumpf.first()
+                timestamp = int(msg1.timestamp / 1000)
+                ts1 = datetime.fromtimestamp(timestamp)
+                print self.pfx + "Begin:    %s  (%s)"  % (ts1, timestamp)
+
+                msg2 = dumpf.last()
+                timestamp = int(msg2.timestamp / 1000)
+                ts2 = datetime.fromtimestamp(timestamp)
+                print self.pfx + "End:      %s  (%s)"  % (ts2, timestamp)
+            print
+
+
+#-------------------------------------------------------------------------------
+
+class CmdText(object):
+    """ Convert to text, as would be provided by the server. """
+
+    names = ['text', 'txt']
+    nargs = 0
+
+    class OutProtocol(TexanProtocol):
+        send_protodefs = [RateProtoDef]
+        def sendLine(self, line):
+            sys.stdout.write(line + '\n')
+
+    def addopts(self, parser):
+        parser.add_option('-s', '--simple', '--server', action='store_true',
+                          help="Render like the server protocol does.")
+
+    def execute(self, args, dumpfiles):
+        if self.opts.simple:
+            rate = CmdText.OutProtocol().rate
+            for dumpf in dumpfiles:
+                decode = dumpf.decode
+                for u in dumpf:
+                    rate(u.ts_actual, u.symbol, u.bid, u.ask)
+        else:
+            write = sys.stdout.write
+            for dumpf in dumpfiles:
+                for u in dumpf:
+                    dt_pub = datetime.fromtimestamp(u.timestamp/1000.0)
+                    delay = (u.ts_actual - u.timestamp)/1000
+                    write('%-20s (%5dms)   %c   %-7s  %24.8f  %24.8f  %20.8f\n' %
+                          (dt_pub.isoformat(' '), delay,
+                           u.venue, u.symbol,
+                           i2d(u.bid), i2d(u.ask), i2d(u.ask - u.bid)))
+
+
+#-------------------------------------------------------------------------------
+
+class CmdGrep(object):
+    """ Filter some instruments from the dumpfile, using a regexp on the
+    symbols. Like grep."""
+
+    names = ['grep']
+    nargs = 0
+
+    def addopts(self, parser):
+        parser.add_option('-e', '--expression', '--include', metavar='REGEXP',
+                          dest='expressions', action='append', default=[],
+                          help=("Name of symbols to include (regexps). "
+                                "Default is to exclude all."))
+
+    def execute(self, args, dumpfiles):
+        msearch = [re.compile(exp).search for exp in self.opts.expressions]
+        write = sys.stdout.write
+
+        for dumpf in dumpfiles:
+            decode = dumpf.decode
+            for msg in dumpf.rawiter():
+                u = decode(msg)
+                sym = u.symbol
+                if any(mfun(sym) for mfun in msearch):
+                    write(msg)
+
+
+#-------------------------------------------------------------------------------
+
+class CmdClamp(object):
+    """ Truncate a dumpfile in time. """
+
+    names = ['clamp']
+    nargs = 0
+
+    def addopts(self, parser):
+        parser.add_option('-L', '-b', '--low', '--min', '--begin', action='store',
+                          help="Minimum time.")
+        parser.add_option('-H', '-e', '--high', '--max', '--end', action='store',
+                          help="Maximum time.")
+
+    def gettime(self, timeopt):
+        if timeopt is None:
+            return None
+        else:
+            t = parse_time(timeopt)
+            if t is None:
+                self.parser.error("Invalid time spec: %s" % repr(timeopt))
+        assert t is not None
+        return mktime(t.timetuple()) * 1000
+
+    def execute(self, args, dumpfiles):
+        for dumpf in dumpfiles:
+            if not dumpf.isseekable():
+                self.parser.error("This command cannot operate on stdin.")
+
+        tlow = self.gettime(self.opts.low)
+        thigh = self.gettime(self.opts.high)
+
+        write = sys.stdout.write
+
+        for dumpf in dumpfiles:
+
+            nlow = None
+            if tlow is not None:
+                nlow = dumpf.findtime(tlow)
+            nhigh = dumpf.findtime(thigh) if thigh is not None else None
+
+            dumpf.seek(nlow or 0)
+            if nhigh is None:
+                for msg in dumpf.rawiter():
+                    write(msg)
+            else:
+                n = nhigh - nlow
+                for msg in dumpf.rawiter():
+                    if n < 0:
+                        break
+                    write(msg)
+                    n -= 1
+
+
+
+#-------------------------------------------------------------------------------
+
+class CmdSplit(object):
+    """ Split up a dumpfile for each instrument. """
+
+    names = ['split']
+    nargs = 0
+
+    def addopts(self, parser):
+        parser.add_option('-o', '--output', action='store',
+                          help="Directory to store all the files.")
+
+    def execute(self, args, dumpfiles):
+        outdir = self.opts.output or os.getcwd()
+        if not exists(outdir):
+            os.makedirs(outdir)
+
+        # A mapping (pair -> output file).
+        files = {}
+
+        for dumpf in dumpfiles:
+            decode = dumpf.decode
+            for msg in dumpf.rawiter():
+                u = decode(msg)
+                sym = u.symbol.strip()
+                try:
+                    f = files[sym]
+                except KeyError:
+                    f = files[sym] = open('%s.dump' % sym.replace('/', '-'), 'wb')
+                f.write(msg)
+
+        [f.close() for f in files.itervalues()]
+
+
+#-------------------------------------------------------------------------------
+
+class CmdMerge(object):
+    """ Merge multiple dumpfiles while maintaining sort order. """
+
+    names = ['merge']
+    nargs = 0
+
+    def execute(self, args, dumpfiles):
+        raise NotImplementedError("Not sure I'll ever need it.")
+
+
+#-------------------------------------------------------------------------------
+
+class CmdPlay(object):
+    """ Playback a dumpfile, as if the first messages was being scheduled to be
+    sent at the time we begin to play."""
+
+    names = ['play']
+    nargs = 0
+
+    maxgap = 2000 # ms
+
+    def addopts(self, parser):
+        parser.add_option('-p', '--port', action='store', type='int', default=5970,
+                          help="Port for the server to listen on.")
+        parser.add_option('-a', '--actualize', action='store_true',
+                          help=("Adjust the timestamps so that they appear "
+                                "to be live quotes instead of using the "
+                                "original timestamps."))
+        parser.add_option('-D', '--discard-ooo', action='store_true',
+                          help="Discard out-of-order packets.")
+        parser.add_option('-g', '--maxgap', action='store_const', const=self.maxgap,
+                          help="Shorten the large gaps to a few secs. This "
+                          "is used for testing, when you just want data being "
+                          "played back.")
+
+    def execute(self, args, dumpfiles):
+        logging.info('Starting to play: %s' % dumpfiles)
+
+        from twisted.internet import reactor
+        from oanda.dispatch import setup_twisted_oanda
+
+        # Start server.
+        setup_twisted_oanda(reactor)
+        self.factory = RateServerFactory(None)
+        self.factory.discard_ooo = self.opts.discard_ooo
+        reactor.listenTCP(self.opts.port, self.factory)
+
+        # Create a generator and start it.
+        self.msgtosend = None
+        self.lasttime = None
+        self.generator = self.generate(dumpfiles,
+                                       self.opts.actualize,
+                                       self.opts.maxgap)
+        self.reactor = reactor
+        reactor.callLater(0, self.next_event)
+
+        # Run the event loop.
+        try:
+            logging.info('Ready.')
+            reactor.run()
+        except KeyboardInterrupt:
+            logging.warning('Interrupted.')
+        return
+
+    def next_event(self):
+        logging.info('------------ next_event')
+        write = self.write
+
+        # Process the delayed event.
+        if self.msgtosend is not None:
+            write(self.msgtosend)
+
+        # Look for the next event, processing all that are overdue.
+        while 1:
+            waitmillis, msg = self.generator.next()
+            if waitmillis <= 0:
+                write(msg)
+                continue
+            assert waitmillis > 0, waitmillis
+            self.msgtosend = msg
+            waitsecs = waitmillis/1000.
+            logging.info('waiting for %.8f secs' % waitsecs)
+            self.reactor.callLater(waitsecs, self.next_event)
+            break
+
+    def write(self, msg):
+        ts = msg[0]
+        if ts != self.lasttime:
+            self.lasttime = ts
+            if self.gopts.verbose:
+                t = datetime.fromtimestamp(ts/1000)
+                # t = t.replace(microsecond=(ts%1000)*1000)
+                logging.info('virtual clock: %s' % t)
+        self.factory.notify_subscribers(*msg)
+
+    def generate(self, dumpfiles, actualize, maxgap):
+        """ Generate pairs of (waitsecs, msg). Note: we play back using
+        'ts_actual', but we transmit 'timestamp' (the published time), just like
+        the original sequence arrived. Here we *really* want to simulate the
+        events as they occured originally."""
+
+        for dumpf in dumpfiles:
+
+            decode = dumpf.decode
+            encode = dumpf.encode
+
+            # A loop just to setup the offset.
+            it = iter(dumpf)
+            try:
+                u = it.next()
+            except StopIteration:
+                continue
+
+            # Decode, offset and write the first message.
+            offset = (int(time()*1000) - u.timestamp)
+            aoffset = offset if actualize else 0
+            yield 0, (u.timestamp + aoffset,
+                      u.venue, u.symbol, u.bid, u.ask)
+
+            # Write all the following messages.
+            for u in it:
+                rts = (u.timestamp + offset)
+                waitmillis = rts - time()*1000
+
+                if maxgap and waitmillis > maxgap:
+                    diff = (waitmillis - maxgap)
+                    if actualize:
+                        aoffset -= diff
+                    offset -= diff
+                    waitmillis = maxgap
+                    ## maxgap = None # disable after fist time
+
+                yield waitmillis, (u.timestamp + aoffset,
+                                   u.venue, u.symbol, u.bid, u.ask)
+
+
+
+#-------------------------------------------------------------------------------
+
+class CmdConvert(object):
+    """ Convert a dumpfile between encodings. """
+
+    names = ['convert']
+    nargs = 2
+
+    def execute(self, args, dumpfiles):
+        from oanserv.dumpfile import getcodec
+
+        codec_from, codec_to = args
+        _, decode, _ = getcodec(codec_from)
+        encode, _, _ = getcodec(codec_to)
+
+        write = sys.stdout.write
+        for dumpf in dumpfiles:
+            assert dumpf.codecname == codec_from, "Invalid input codec."
+            for msg in dumpf.rawiter():
+                write(encode(*decode(msg)))
+
+
+
+#-------------------------------------------------------------------------------
+
+class CmdOrderingStats(object):
+    """ Sometimes the API notifies us with timestamps that are out-of-order.
+    This command displays stats about those out-of-order packets. """
+
+    names = ['ooostats']
+    nargs = 0
+
+    pfx = '   '
+
+    def execute(self, args, dumpfiles):
+        for dumpf in dumpfiles:
+            maxdelay = 0
+            maxdelays = 0
+            delays = []
+            perc = 0
+            u = dumpf.first()
+            prev_timestamp = u.timestamp
+            total = len(dumpf)
+            nbooo = 0
+            for u in dumpf:
+                if u.timestamp < prev_timestamp:
+                    nbooo += 1
+                    delay = prev_timestamp - u.timestamp
+                    maxdelays += delay
+                    delays.append(delay)
+                    maxdelay = max(maxdelay, delay)
+                    continue
+                prev_timestamp = u.timestamp
+
+            ## print '   Nb. out-of-order            Max.delay        Avg.delay'
+            fmt = '%s   %20s   %.3f secs   %.3f secs'
+            repo ='%s/%s (%.2f%%)' % (nbooo, total, 100*float(nbooo)/total)
+            print fmt % (u.symbol, repo, maxdelay/1000.0, maxdelays/(1000.0*(nbooo or 1)))
+
+
+
+#-------------------------------------------------------------------------------
+
+def parse_subcommands(gparser, subcmds):
+    """Parse given global arguments, find subcommand from given list of
+    subcommand objects, parse local arguments and return a tuple of global
+    options, selected command object, command options, and command arguments.
+    Call execute() on the command object to run. The command object has members
+    'gopts' and 'opts' set for global and command options respectively, you
+    don't need to call execute with those but you could if you wanted to."""
+
+    import optparse
+    global subcmds_map # needed for help command only.
+
+    # Build map of name -> command and docstring.
+    subcmds_map = {}
+    gparser.usage += '\n\nAvailable Subcommands\n\n'
+    for sc in subcmds:
+        gparser.usage += '- %s: %s\n' % (', '.join(sc.names),
+                                       sc.__doc__.splitlines()[0])
+        for n in sc.names:
+            assert n not in subcmds_map, (n, subcmds_map)
+            subcmds_map[n] = sc
+
+    # Declare and parse global options.
+    gparser.disable_interspersed_args()
+
+    gopts, args = gparser.parse_args()
+    if not args:
+        gparser.print_help()
+        raise SystemExit("Error: you must specify a command to use.")
+    subcmdname, subargs = args[0], args[1:]
+
+    # Parse command arguments and invoke command.
+    try:
+        sc = subcmds_map[subcmdname]
+        lparser = optparse.OptionParser(sc.__doc__.strip())
+        sc.parser = lparser
+        if hasattr(sc, 'addopts'):
+            sc.addopts(lparser)
+        sc.gopts = gopts
+        sc.opts, subsubargs = lparser.parse_args(subargs)
+    except KeyError:
+        raise SystemExit("Error: invalid command '%s'" % subcmdname)
+
+    return sc.gopts, sc, sc.opts, subsubargs
+
+def main():
+
+    # Create global options parser.
+    import optparse
+    gparser = optparse.OptionParser(__doc__.strip())
+    gparser.add_option('-v', '--verbose', action='store_true',
+                      help="Verbose mode.")
+
+    # Declare subcommands.
+    subcmds = [
+        CmdInfo(),
+        CmdGrep(),
+        CmdSplit(),
+        CmdMerge(),
+        CmdClamp(),
+        CmdPlay(),
+        CmdText(),
+        CmdConvert(),
+        CmdOrderingStats(),
+    ]
+
+    gopts, sc, opts, args = parse_subcommands(gparser, subcmds)
+    sc.gopts, sc.opts = gopts, opts
+
+    logging.basicConfig(level=logging.INFO if gopts.verbose else logging.WARNING,
+                        format='%(asctime)s [%(levelname)-8s]  %(message)s')
+
+    # Always assume that the arguments are a list of dumpfiles.
+    dumpfiles = []
+    subargs, dumpfns = args[:sc.nargs], args[sc.nargs:]
+
+    # If no filenames are specified, read from stdin.
+    if not dumpfns:
+        try:
+            df = opendump_stdin()
+            if df.codecname is None:
+                raise IOError("Unknown codec.")
+            dumpfiles.append(df)
+        except IOError, e:
+            logging.error("Error with '%s': %s" % (fn, e))
+
+    else:
+        for fn in dumpfns:
+            try:
+                df = opendump(fn)
+                if df.codecname is None:
+                    raise IOError("Unknown codec.")
+                dumpfiles.append(opendump(fn))
+            except IOError, e:
+                logging.error("Error with '%s': %s" % (fn, e))
+
+    sc.execute(subargs, dumpfiles)
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
